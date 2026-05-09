@@ -18,7 +18,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as WebBrowser from 'expo-web-browser';
 import { AuthService } from '../services/authService';
 
@@ -47,19 +46,13 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithFacebook } = useAuth();
 
   // Google Auth Request
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
     androidClientId: 'YOUR_GOOGLE_ANDROID_CLIENT_ID',
     iosClientId: 'YOUR_GOOGLE_IOS_CLIENT_ID',
     webClientId: 'YOUR_GOOGLE_WEB_CLIENT_ID',
-  });
-
-  // Facebook Auth Request
-  const [fbRequest, fbResponse, promptFacebookAsync] = Facebook.useAuthRequest({
-    clientId: 'YOUR_FACEBOOK_APP_ID',
-    scopes: ['public_profile', 'email'],
   });
 
   // Handle Google Response
@@ -72,24 +65,12 @@ export default function LoginScreen({ navigation }: Props) {
     }
   }, [googleResponse]);
 
-  // Handle Facebook Response
-  React.useEffect(() => {
-    if (fbResponse?.type === 'success') {
-      const { authentication } = fbResponse;
-      if (authentication?.accessToken) {
-        handleSocialLoginSuccess('facebook', authentication.accessToken);
-      }
-    }
-  }, [fbResponse]);
-
-  const handleSocialLoginSuccess = async (provider: 'google' | 'facebook', token: string) => {
+  const handleSocialLoginSuccess = async (provider: 'google', token: string) => {
     setLoading(true);
     let socialUser = null;
 
     if (provider === 'google') {
       socialUser = await AuthService.fetchGoogleUserInfo(token);
-    } else {
-      socialUser = await AuthService.fetchFacebookUserInfo(token);
     }
 
     setLoading(false);
@@ -120,8 +101,15 @@ export default function LoginScreen({ navigation }: Props) {
     promptGoogleAsync();
   };
 
-  const handleFacebookLogin = () => {
-    promptFacebookAsync();
+  const handleFacebookLogin = async () => {
+    setLoading(true);
+    try {
+      await loginWithFacebook();
+    } catch (err: any) {
+      Alert.alert('Lá»—i', err.message || 'ÄÄƒng nháº­p Facebook tháº¥t báº¡i.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

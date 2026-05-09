@@ -41,10 +41,12 @@ export default function RegisterScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { requestRegistrationOtp, verifyRegistrationOtp } = useAuth();
 
-  const handleRegister = async () => {
+  const handleRequestOtp = async () => {
     if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin.');
       return;
@@ -62,13 +64,44 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      await register(email.trim(), password, fullName.trim());
+      await requestRegistrationOtp(email.trim(), password, fullName.trim());
+      setOtp('');
+      setOtpSent(true);
+      Alert.alert('Thanh cong', 'Ma OTP da duoc gui toi email cua ban.');
     } catch (err: any) {
-      const message = err.response?.data?.error || 'Đăng ký thất bại. Vui lòng thử lại.';
+      const message = err.response?.data?.error || 'Không thể gửi mã OTP. Vui lòng thử lại.';
       Alert.alert('Lỗi', message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifyOtp = async () => {
+    const normalizedOtp = otp.trim();
+    if (!normalizedOtp) {
+      Alert.alert('Lỗi', 'Vui lòng nhập mã OTP.');
+      return;
+    }
+
+    if (normalizedOtp.length !== 6) {
+      Alert.alert('Lỗi', 'Mã OTP gồm 6 chữ số.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await verifyRegistrationOtp(email.trim(), normalizedOtp);
+    } catch (err: any) {
+      const message = err.response?.data?.error || 'Xác thực OTP thất bại. Vui lòng thử lại.';
+      Alert.alert('Lỗi', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditEmail = () => {
+    setOtp('');
+    setOtpSent(false);
   };
 
   const handleGoogleLogin = () => {
@@ -109,6 +142,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={fullName}
                 onChangeText={setFullName}
                 autoComplete="name"
+                editable={!otpSent && !loading}
               />
             </View>
 
@@ -123,6 +157,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                editable={!otpSent && !loading}
               />
             </View>
 
@@ -136,6 +171,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                editable={!otpSent && !loading}
               />
             </View>
 
@@ -149,19 +185,51 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
+                editable={!otpSent && !loading}
               />
             </View>
 
             {/* Register Button */}
+            {otpSent && (
+              <>
+                <Text style={styles.otpDescription}>
+                  Nhập mã OTP đã gửi tới {email.trim()} để hoàn tất đăng ký.
+                </Text>
+
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="key-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Mã OTP"
+                    placeholderTextColor="#A0A0A0"
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                  />
+                </View>
+
+                <View style={styles.otpActions}>
+                  <TouchableOpacity onPress={handleRequestOtp} disabled={loading}>
+                    <Text style={styles.otpActionText}>Gửi lại OTP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleEditEmail} disabled={loading}>
+                    <Text style={styles.otpActionText}>Đổi email</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
             <TouchableOpacity
               style={[styles.primaryButton, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
+              onPress={otpSent ? handleVerifyOtp : handleRequestOtp}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.primaryButtonText}>Đăng ký</Text>
+                <Text style={styles.primaryButtonText}>
+                  {otpSent ? 'Xác nhận OTP' : 'Gửi mã OTP'}
+                </Text>
               )}
             </TouchableOpacity>
 
@@ -266,6 +334,25 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: THEME_COLORS.text,
+    fontFamily: 'Manrope',
+  },
+  otpDescription: {
+    color: THEME_COLORS.secondaryText,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+    fontFamily: 'Manrope',
+  },
+  otpActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  otpActionText: {
+    color: THEME_COLORS.primary,
+    fontSize: 14,
+    fontWeight: '700',
     fontFamily: 'Manrope',
   },
   primaryButton: {

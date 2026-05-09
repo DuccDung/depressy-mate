@@ -6,11 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Physical Device (Wifi): http://<YOUR_LAN_IP>:3000/api
 // Physical Device (USB): http://127.0.0.1:3000/api (run 'adb reverse tcp:3000 tcp:3000' first)
 // Fly.io Server: https://depressy-mate.fly.dev/api     
-const API_BASE_URL = 'http://192.168.1.103:5210/api'; // ASP.NET Core API
+export const API_ORIGIN = 'http://192.168.1.103:5210';
+const API_BASE_URL = `${API_ORIGIN}/api`; // ASP.NET Core API
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },

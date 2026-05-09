@@ -1,0 +1,73 @@
+@model LoginViewModel
+
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h1 class="h3 mb-3 text-center">Đăng nhập</h1>
+                <p class="text-muted text-center mb-4">Chào mừng bạn quay lại Depressy Mate.</p>
+
+                @if (TempData["AuthError"] is string authError)
+                {
+                    <div class="alert alert-danger" role="alert">@authError</div>
+                }
+
+                <form asp-controller="Auth" asp-action="Facebook" method="post" class="mb-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button type="submit" class="btn btn-primary w-100">
+                        Đăng nhập với Facebook
+                    </button>
+                </form>
+
+                <form asp-controller="Auth" asp-action="Google" method="post" class="mb-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        Đăng nhập với Google
+                    </button>
+                </form>
+
+                <div class="d-flex align-items-center gap-2 my-4">
+                    <hr class="flex-grow-1" />
+                    <span class="text-muted small">hoặc</span>
+                    <hr class="flex-grow-1" />
+                </div>
+
+                <form asp-controller="Auth" asp-action="Login" method="post">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="ReturnUrl" type="hidden" />
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label">Email</label>
+                        <input asp-for="Email" class="form-control" autocomplete="email" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label">Mật khẩu</label>
+                        <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100">Đăng nhập</button>
+                </form>
+
+                <p class="text-center mt-4 mb-0">
+                    Chưa có tài khoản?
+                    <a asp-controller="Auth" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Đăng ký</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

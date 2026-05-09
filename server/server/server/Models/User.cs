@@ -15,6 +15,14 @@ public partial class User
 
     public string? AvatarUrl { get; set; }
 
+    public string? FacebookId { get; set; }
+
+    public string? FullName { get; set; }
+
+    public string? AuthProvider { get; set; }
+
+    public bool IsEmailVerified { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

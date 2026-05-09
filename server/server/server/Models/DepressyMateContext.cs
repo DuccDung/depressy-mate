@@ -420,6 +420,16 @@ public partial class DepressyMateContext : DbContext
             entity.Property(e => e.Email)
                 .HasMaxLength(255)
                 .HasColumnName("email");
+            entity.Property(e => e.AuthProvider)
+                .HasMaxLength(50)
+                .HasColumnName("auth_provider");
+            entity.Property(e => e.FacebookId)
+                .HasMaxLength(100)
+                .HasColumnName("facebook_id");
+            entity.Property(e => e.FullName)
+                .HasMaxLength(255)
+                .HasColumnName("full_name");
+            entity.Property(e => e.IsEmailVerified).HasColumnName("is_email_verified");
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
                 .HasColumnName("password_hash");
