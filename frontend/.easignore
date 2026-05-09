@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Expo/local build output
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Android local build/cache files
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Local env files
+.env
+.env*.local
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo

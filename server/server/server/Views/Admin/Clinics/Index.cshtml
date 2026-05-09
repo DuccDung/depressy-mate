@@ -1,0 +1,145 @@
+@model server.Models.Admin.AdminClinicIndexViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý phòng khám";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a class="active" asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Danh bạ y tế</p>
+                <h1>Quản lý phòng khám</h1>
+                <p>Quản lý hồ sơ phòng khám, khoa điều trị, giờ làm việc, dịch vụ và hình ảnh hiển thị trên app.</p>
+            </div>
+
+            <a class="admin-primary-link compact" asp-controller="AdminClinics" asp-action="Create">Thêm phòng khám</a>
+        </header>
+
+        @if (TempData["AdminClinicSuccess"] is string successMessage)
+        {
+            <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
+        }
+
+        @if (TempData["AdminClinicError"] is string errorMessage)
+        {
+            <div class="admin-alert admin-alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <section class="admin-clinic-overview" aria-label="Thống kê phòng khám">
+            <article>
+                <span>Tổng phòng khám</span>
+                <strong>@Model.TotalClinics</strong>
+            </article>
+            <article>
+                <span>Khoa/phòng ban</span>
+                <strong>@Model.DepartmentCount</strong>
+            </article>
+            <article>
+                <span>Địa điểm</span>
+                <strong>@Model.AddressCount</strong>
+            </article>
+            <article>
+                <span>Có ảnh</span>
+                <strong>@Model.WithAvatarCount</strong>
+            </article>
+        </section>
+
+        <section class="admin-panel compact-panel">
+            <form asp-controller="AdminClinics" asp-action="Index" method="get" class="admin-doctor-filter">
+                <label class="admin-field">
+                    <span>Tìm kiếm</span>
+                    <input name="search" value="@Model.Search" placeholder="Tên, khoa, địa chỉ..." />
+                </label>
+
+                <div class="admin-filter-actions">
+                    <button type="submit" class="admin-primary-button compact">Lọc</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminClinics" asp-action="Index">Xóa lọc</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="admin-clinic-list" aria-label="Danh sách phòng khám">
+            @if (Model.Clinics.Count == 0)
+            {
+                <div class="admin-panel compact-panel admin-empty-cell">Chưa có phòng khám phù hợp.</div>
+            }
+            else
+            {
+                foreach (var clinic in Model.Clinics)
+                {
+                    <article class="admin-clinic-card">
+                        <div class="admin-clinic-cover">
+                            @if (!string.IsNullOrWhiteSpace(clinic.UrlAvatar))
+                            {
+                                <img src="@clinic.UrlAvatar" alt="@clinic.Name" />
+                            }
+                            else
+                            {
+                                <span>@clinic.Name.Substring(0, 1).ToUpperInvariant()</span>
+                            }
+                        </div>
+
+                        <div class="admin-clinic-content">
+                            <div class="admin-clinic-title-row">
+                                <div>
+                                    <h2>@clinic.Name</h2>
+                                    <p>@(string.IsNullOrWhiteSpace(clinic.Department) ? "Chưa cập nhật khoa/phòng ban" : clinic.Department)</p>
+                                </div>
+
+                                <div class="admin-row-actions">
+                                    <a asp-controller="AdminClinics" asp-action="Edit" asp-route-id="@clinic.Id">Sửa</a>
+                                    <form asp-controller="AdminClinics" asp-action="Delete" asp-route-id="@clinic.Id" method="post" onsubmit="return confirm('Bạn chắc chắn muốn xóa phòng khám này?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit">Xóa</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <dl class="admin-clinic-meta">
+                                <div>
+                                    <dt>Địa chỉ</dt>
+                                    <dd>@(string.IsNullOrWhiteSpace(clinic.Address) ? "—" : clinic.Address)</dd>
+                                </div>
+                                <div>
+                                    <dt>Giờ làm việc</dt>
+                                    <dd>@(string.IsNullOrWhiteSpace(clinic.WorkingHours) ? "—" : clinic.WorkingHours)</dd>
+                                </div>
+                                <div>
+                                    <dt>Chi phí</dt>
+                                    <dd>@(string.IsNullOrWhiteSpace(clinic.PriceReference) ? "—" : clinic.PriceReference)</dd>
+                                </div>
+                            </dl>
+
+                            @if (!string.IsNullOrWhiteSpace(clinic.ServicesText))
+                            {
+                                <p class="admin-clinic-services">@clinic.ServicesText</p>
+                            }
+
+                            <small>Cập nhật @clinic.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy")</small>
+                        </div>
+                    </article>
+                }
+            }
+        </section>
+    </section>
+</main>

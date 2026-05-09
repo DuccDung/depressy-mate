@@ -1,0 +1,99 @@
+@model server.Models.Admin.AdminDashboardViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Bảng điều khiển quản trị";
+}
+
+<main class="admin-dashboard">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a class="active" asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-topbar">
+            <div>
+                <p class="admin-kicker">Trang chủ admin</p>
+                <h1>Xin chào, @Model.AdminName</h1>
+            </div>
+
+            <div class="admin-account">
+                <div>
+                    <strong>@Model.AdminRole</strong>
+                    <span>@Model.AdminEmail</span>
+                </div>
+                <form asp-controller="Admin" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="admin-ghost-button">Đăng xuất</button>
+                </form>
+            </div>
+        </header>
+
+        <section class="admin-hero-band">
+            <div>
+                <p class="admin-kicker">Vận hành Depressy Mate</p>
+                <h2>Bảng điều khiển quản trị đã sẵn sàng</h2>
+                <p>
+                    Đây là khung admin web riêng cho quản lý hệ thống. Các module tiếp theo
+                    có thể gắn vào sidebar mà không ảnh hưởng đến mobile app.
+                </p>
+            </div>
+        </section>
+
+        <section class="admin-stat-grid" aria-label="Thống kê hệ thống">
+            <article class="admin-stat-card">
+                <span>Người dùng</span>
+                <strong>@Model.TotalUsers</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Bác sĩ</span>
+                <strong>@Model.TotalDoctors</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Phòng khám</span>
+                <strong>@Model.TotalClinics</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Bài đánh giá</span>
+                <strong>@Model.TotalAssessments</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Check-in</span>
+                <strong>@Model.TotalCheckins</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Bài viết</span>
+                <strong>@Model.TotalPosts</strong>
+            </article>
+        </section>
+
+        <section class="admin-module-grid" aria-label="Module quản trị">
+            <article>
+                <h3>Quản lý người dùng</h3>
+                <p>Theo dõi tài khoản, trạng thái và phân quyền.</p>
+            </article>
+            <article>
+                <h3>Danh bạ y tế</h3>
+                <p>Quản lý bác sĩ, phòng khám và thông tin liên hệ.</p>
+            </article>
+            <article>
+                <h3>Nội dung cộng đồng</h3>
+                <p>Kiểm duyệt bài viết, bình luận và tương tác.</p>
+            </article>
+        </section>
+    </section>
+</main>

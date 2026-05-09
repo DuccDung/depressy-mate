@@ -21,6 +21,7 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  GoogleLogin: undefined;
 };
 
 type Props = {
@@ -64,7 +65,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<RegisterErrors>({});
   const [loading, setLoading] = useState(false);
-  const { requestRegistrationOtp, verifyRegistrationOtp, loginWithFacebook } = useAuth();
+  const { requestRegistrationOtp, verifyRegistrationOtp } = useAuth();
 
   const clearFieldError = (field: keyof RegisterErrors) => {
     if (errors[field]) {
@@ -167,22 +168,8 @@ export default function RegisterScreen({ navigation }: Props) {
     setErrors({});
   };
 
-  const handleFacebookRegister = async () => {
-    setLoading(true);
-    try {
-      await loginWithFacebook();
-    } catch (error: any) {
-      Alert.alert(
-        'Đăng ký Facebook thất bại',
-        getApiErrorMessage(error, 'Không thể tiếp tục với Facebook. Vui lòng thử lại.')
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleRegister = () => {
-    Alert.alert('Chưa khả dụng', 'Đăng ký Google trên app chưa được kết nối với server.');
+    navigation.navigate('GoogleLogin');
   };
 
   return (
@@ -366,10 +353,6 @@ export default function RegisterScreen({ navigation }: Props) {
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookRegister} disabled={loading}>
-                <Ionicons name="logo-facebook" size={20} color={THEME_COLORS.primary} />
-                <Text style={styles.socialButtonText}>Facebook</Text>
-              </TouchableOpacity>
             </View>
 
             <TouchableOpacity

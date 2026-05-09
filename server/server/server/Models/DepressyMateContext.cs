@@ -181,6 +181,7 @@ public partial class DepressyMateContext : DbContext
 
             entity.Property(e => e.Id)
                 .HasMaxLength(100)
+                .HasDefaultValueSql("(CONVERT([nvarchar](100),newid()))")
                 .HasColumnName("id");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)

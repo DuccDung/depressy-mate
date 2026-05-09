@@ -51,17 +51,6 @@
             "backgroundColor": "#000000"
           }
         }
-      ],
-      [
-        "react-native-fbsdk-next",
-        {
-          "appID": "3210662712474768",
-          "displayName": "Depressy Mate",
-          "scheme": "fb3210662712474768",
-          "advertiserIDCollectionEnabled": false,
-          "autoLogAppEventsEnabled": false,
-          "isAutoInitEnabled": true
-        }
       ]
     ],
     "experiments": {

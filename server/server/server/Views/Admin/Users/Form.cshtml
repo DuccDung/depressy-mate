@@ -1,0 +1,125 @@
+@model server.Models.Admin.AdminUserFormViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.IsEdit ? "Sửa người dùng" : "Thêm người dùng";
+    var actionName = Model.IsEdit ? "Edit" : "Create";
+}
+
+<main class="admin-dashboard">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a class="active" asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header">
+            <div>
+                <p class="admin-kicker">Hồ sơ người dùng</p>
+                <h1>@ViewData["Title"]</h1>
+                <p>Cập nhật thông tin tài khoản, quyền truy cập và ảnh đại diện.</p>
+            </div>
+
+            <a class="admin-secondary-link" asp-controller="AdminUsers" asp-action="Index">Quay lại danh sách</a>
+        </header>
+
+        <section class="admin-panel admin-user-form-panel">
+            <form asp-controller="AdminUsers"
+                  asp-action="@actionName"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="admin-user-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <input asp-for="CurrentAvatarUrl" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+                <div class="admin-avatar-editor">
+                    <div class="admin-avatar-preview">
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentAvatarUrl))
+                        {
+                            <img src="@Model.CurrentAvatarUrl" alt="@Model.FullName" />
+                        }
+                        else
+                        {
+                            <span>Ảnh</span>
+                        }
+                    </div>
+
+                    <label class="admin-file-field">
+                        <span>Ảnh đại diện</span>
+                        <input asp-for="AvatarFile" type="file" accept="image/png,image/jpeg,image/webp" />
+                        <small>Chọn ảnh JPG, PNG hoặc WEBP từ máy local. Tối đa 5MB.</small>
+                        <span asp-validation-for="AvatarFile" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <div class="admin-form-grid">
+                    <label class="admin-field">
+                        <span>Họ và tên</span>
+                        <input asp-for="FullName" autocomplete="name" placeholder="Nhập họ và tên" />
+                        <span asp-validation-for="FullName" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Email</span>
+                        <input asp-for="Email" autocomplete="email" placeholder="user@example.com" />
+                        <span asp-validation-for="Email" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Quyền</span>
+                        <select asp-for="Role">
+                            <option value="USER">USER</option>
+                            <option value="DOCTOR">DOCTOR</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="AMDIN">AMDIN</option>
+                        </select>
+                        <span asp-validation-for="Role" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Mật khẩu @(Model.IsEdit ? "mới" : "")</span>
+                        <input asp-for="Password" type="password" autocomplete="new-password" placeholder="@(Model.IsEdit ? "Để trống nếu không đổi" : "Nhập mật khẩu")" />
+                        <span asp-validation-for="Password" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <label class="admin-field">
+                    <span>Tiểu sử</span>
+                    <textarea asp-for="Bio" rows="4" placeholder="Ghi chú ngắn về người dùng"></textarea>
+                    <span asp-validation-for="Bio" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-check-field">
+                    <input asp-for="IsEmailVerified" />
+                    <span>Đánh dấu email đã xác minh</span>
+                </label>
+
+                <div class="admin-form-actions">
+                    <button type="submit" class="admin-primary-button">Lưu người dùng</button>
+                    <a class="admin-secondary-link" asp-controller="AdminUsers" asp-action="Index">Hủy</a>
+                </div>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

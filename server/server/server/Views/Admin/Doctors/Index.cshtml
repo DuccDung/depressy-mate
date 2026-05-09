@@ -1,0 +1,141 @@
+@model server.Models.Admin.AdminDoctorIndexViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý bác sĩ";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a class="active" asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Danh bạ y tế</p>
+                <h1>Quản lý bác sĩ</h1>
+                <p>Thêm, chỉnh sửa và cập nhật hồ sơ chuyên môn của bác sĩ.</p>
+            </div>
+
+            <a class="admin-primary-link compact" asp-controller="AdminDoctors" asp-action="Create">Thêm bác sĩ</a>
+        </header>
+
+        @if (TempData["AdminDoctorSuccess"] is string successMessage)
+        {
+            <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
+        }
+
+        @if (TempData["AdminDoctorError"] is string errorMessage)
+        {
+            <div class="admin-alert admin-alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <section class="admin-doctor-stat-grid" aria-label="Thống kê bác sĩ">
+            <article>
+                <span>Tổng bác sĩ</span>
+                <strong>@Model.TotalDoctors</strong>
+            </article>
+            <article>
+                <span>Chuyên khoa</span>
+                <strong>@Model.SpecialtyCount</strong>
+            </article>
+            <article>
+                <span>Nơi công tác</span>
+                <strong>@Model.WorkplaceCount</strong>
+            </article>
+            <article>
+                <span>Có ảnh</span>
+                <strong>@Model.WithAvatarCount</strong>
+            </article>
+        </section>
+
+        <section class="admin-panel compact-panel">
+            <form asp-controller="AdminDoctors" asp-action="Index" method="get" class="admin-doctor-filter">
+                <label class="admin-field">
+                    <span>Tìm kiếm</span>
+                    <input name="search" value="@Model.Search" placeholder="Tên, chuyên khoa, nơi công tác..." />
+                </label>
+
+                <div class="admin-filter-actions">
+                    <button type="submit" class="admin-primary-button compact">Lọc</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminDoctors" asp-action="Index">Xóa lọc</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="admin-doctor-grid" aria-label="Danh sách bác sĩ">
+            @if (Model.Doctors.Count == 0)
+            {
+                <div class="admin-panel compact-panel admin-empty-cell">Chưa có bác sĩ phù hợp.</div>
+            }
+            else
+            {
+                foreach (var doctor in Model.Doctors)
+                {
+                    <article class="admin-doctor-card">
+                        <div class="admin-doctor-card-head">
+                            @if (!string.IsNullOrWhiteSpace(doctor.UrlAvatar))
+                            {
+                                <img src="@doctor.UrlAvatar" alt="@doctor.Name" />
+                            }
+                            else
+                            {
+                                <span>@doctor.Name.Substring(0, 1).ToUpperInvariant()</span>
+                            }
+
+                            <div>
+                                <h2>@doctor.Name</h2>
+                                <p>@(string.IsNullOrWhiteSpace(doctor.Specialty) ? "Chưa cập nhật chuyên khoa" : doctor.Specialty)</p>
+                            </div>
+                        </div>
+
+                        <dl class="admin-doctor-meta">
+                            <div>
+                                <dt>Học vị</dt>
+                                <dd>@(string.IsNullOrWhiteSpace(doctor.Degree) ? "—" : doctor.Degree)</dd>
+                            </div>
+                            <div>
+                                <dt>Kinh nghiệm</dt>
+                                <dd>@(string.IsNullOrWhiteSpace(doctor.Experience) ? "—" : doctor.Experience)</dd>
+                            </div>
+                            <div>
+                                <dt>Nơi công tác</dt>
+                                <dd>@(string.IsNullOrWhiteSpace(doctor.Workplace) ? "—" : doctor.Workplace)</dd>
+                            </div>
+                            <div>
+                                <dt>Chi phí</dt>
+                                <dd>@(string.IsNullOrWhiteSpace(doctor.PriceReference) ? "—" : doctor.PriceReference)</dd>
+                            </div>
+                        </dl>
+
+                        <div class="admin-doctor-card-foot">
+                            <small>Cập nhật @doctor.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy")</small>
+                            <div class="admin-row-actions">
+                                <a asp-controller="AdminDoctors" asp-action="Edit" asp-route-id="@doctor.Id">Sửa</a>
+                                <form asp-controller="AdminDoctors" asp-action="Delete" asp-route-id="@doctor.Id" method="post" onsubmit="return confirm('Bạn chắc chắn muốn xóa bác sĩ này?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit">Xóa</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                }
+            }
+        </section>
+    </section>
+</main>

@@ -1,0 +1,197 @@
+@model server.Models.Admin.AdminUserIndexViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý người dùng";
+}
+
+<main class="admin-dashboard">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a class="active" asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header">
+            <div>
+                <p class="admin-kicker">Quản trị tài khoản</p>
+                <h1>Quản lý người dùng</h1>
+                <p>Theo dõi hồ sơ, quyền truy cập và thông tin hoạt động của người dùng.</p>
+            </div>
+
+            <a class="admin-primary-link" asp-controller="AdminUsers" asp-action="Create">Thêm người dùng</a>
+        </header>
+
+        @if (TempData["AdminUserSuccess"] is string successMessage)
+        {
+            <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
+        }
+
+        @if (TempData["AdminUserError"] is string errorMessage)
+        {
+            <div class="admin-alert admin-alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <section class="admin-user-stat-grid" aria-label="Thống kê người dùng">
+            <article class="admin-stat-card">
+                <span>Tổng người dùng</span>
+                <strong>@Model.TotalUsers</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Quản trị</span>
+                <strong>@Model.AdminUsers</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Bác sĩ</span>
+                <strong>@Model.DoctorUsers</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Người dùng thường</span>
+                <strong>@Model.NormalUsers</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Đã xác minh email</span>
+                <strong>@Model.VerifiedUsers</strong>
+            </article>
+        </section>
+
+        <section class="admin-panel">
+            <form asp-controller="AdminUsers" asp-action="Index" method="get" class="admin-filter-form">
+                <label class="admin-field">
+                    <span>Tìm kiếm</span>
+                    <input name="search" value="@Model.Search" placeholder="Email, họ tên..." />
+                </label>
+
+                <label class="admin-field">
+                    <span>Quyền</span>
+                    <select name="role">
+                        @if (string.IsNullOrWhiteSpace(Model.Role))
+                        {
+                            <option value="" selected>Tất cả quyền</option>
+                        }
+                        else
+                        {
+                            <option value="">Tất cả quyền</option>
+                        }
+
+                        @foreach (var roleOption in new[] { "USER", "DOCTOR", "ADMIN", "AMDIN" })
+                        {
+                            if (Model.Role == roleOption)
+                            {
+                                <option value="@roleOption" selected>@roleOption</option>
+                            }
+                            else
+                            {
+                                <option value="@roleOption">@roleOption</option>
+                            }
+                        }
+                    </select>
+                </label>
+
+                <div class="admin-filter-actions">
+                    <button type="submit" class="admin-primary-button">Lọc danh sách</button>
+                    <a class="admin-secondary-link" asp-controller="AdminUsers" asp-action="Index">Xóa lọc</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="admin-panel">
+            <div class="admin-panel-title">
+                <div>
+                    <h2>Danh sách người dùng</h2>
+                    <p>Hiển thị tối đa 200 tài khoản mới nhất theo bộ lọc hiện tại.</p>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Người dùng</th>
+                            <th>Quyền</th>
+                            <th>Trạng thái</th>
+                            <th>Hoạt động</th>
+                            <th>Ngày tạo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Users.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="6" class="admin-empty-cell">Chưa có người dùng phù hợp.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var user in Model.Users)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="admin-user-cell">
+                                            @if (!string.IsNullOrWhiteSpace(user.AvatarUrl))
+                                            {
+                                                <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                            }
+                                            else
+                                            {
+                                                <span class="admin-avatar-fallback">@user.FullName.Substring(0, 1).ToUpperInvariant()</span>
+                                            }
+                                            <div>
+                                                <strong>@user.FullName</strong>
+                                                <span>@user.Email</span>
+                                                <small>@user.AuthProvider</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="admin-role-pill">@user.Role</span></td>
+                                    <td>
+                                        @if (user.IsEmailVerified)
+                                        {
+                                            <span class="admin-status-pill success">Đã xác minh</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="admin-status-pill muted">Chưa xác minh</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="admin-activity-stack">
+                                            <span>@user.AssessmentCount đánh giá</span>
+                                            <span>@user.CheckinCount check-in</span>
+                                            <span>@user.JournalCount nhật ký</span>
+                                            <span>@user.PostCount bài viết</span>
+                                        </div>
+                                    </td>
+                                    <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="admin-row-actions">
+                                            <a asp-controller="AdminUsers" asp-action="Edit" asp-route-id="@user.Id">Sửa</a>
+                                            <form asp-controller="AdminUsers" asp-action="Delete" asp-route-id="@user.Id" method="post" onsubmit="return confirm('Bạn chắc chắn muốn xóa người dùng này?');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit">Xóa</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
+</main>

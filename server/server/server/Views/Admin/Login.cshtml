@@ -1,0 +1,99 @@
+@model server.Models.Admin.AdminLoginViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Đăng nhập quản trị";
+}
+
+<main class="admin-login-page">
+    <section class="admin-login-shell">
+        <aside class="admin-login-brand">
+            <div class="admin-brand-row">
+                    <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+                <div>
+                    <div class="admin-brand-name">Depressy Mate</div>
+                    <div class="admin-brand-subtitle">Cổng quản trị</div>
+                </div>
+            </div>
+
+            <div class="admin-brand-copy">
+                <p class="admin-kicker">Vận hành sức khỏe tinh thần</p>
+                <h1>Bảng điều khiển dành cho đội ngũ quản trị</h1>
+                <p>
+                    Quản lý tài khoản, bác sĩ, phòng khám, nội dung và các chỉ số chăm sóc
+                    người dùng trong một không gian riêng cho admin.
+                </p>
+            </div>
+
+            <div class="admin-login-badges" aria-label="Ghi chú bảo mật">
+                <span>Quyền: AMDIN</span>
+                <span>Google/Facebook</span>
+                <span>Cookie bảo mật</span>
+            </div>
+        </aside>
+
+        <section class="admin-login-panel">
+            <div class="admin-form-header">
+                <p class="admin-kicker">Truy cập bảo mật</p>
+                <h2>Đăng nhập admin</h2>
+                <p>Chỉ tài khoản có role AMDIN mới được vào trang chủ quản trị.</p>
+            </div>
+
+            @if (TempData["AdminAuthError"] is string authError)
+            {
+                <div class="admin-alert admin-alert-danger" role="alert">@authError</div>
+            }
+
+            <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+            <form asp-controller="Admin" asp-action="Login" method="post" class="admin-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="ReturnUrl" type="hidden" />
+
+                <label class="admin-field">
+                    <span>Email</span>
+                    <input asp-for="Email" autocomplete="email" placeholder="admin@depressymate.com" />
+                    <span asp-validation-for="Email" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Mật khẩu</span>
+                    <input asp-for="Password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                    <span asp-validation-for="Password" class="admin-validation"></span>
+                </label>
+
+                <button type="submit" class="admin-primary-button">Vào trang chủ</button>
+            </form>
+
+            <div class="admin-divider">
+                <span></span>
+                <p>Hoặc đăng nhập bằng</p>
+                <span></span>
+            </div>
+
+            <div class="admin-social-grid">
+                <form asp-controller="Admin" asp-action="Google" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button type="submit" class="admin-social-button admin-google-button">
+                        <span>G</span>
+                        Tiếp tục với Google
+                    </button>
+                </form>
+
+                <form asp-controller="Admin" asp-action="Facebook" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button type="submit" class="admin-social-button admin-facebook-button">
+                        <span>f</span>
+                        Tiếp tục với Facebook
+                    </button>
+                </form>
+            </div>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

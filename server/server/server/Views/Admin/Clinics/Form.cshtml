@@ -1,0 +1,121 @@
+@model server.Models.Admin.AdminClinicFormViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.IsEdit ? "Sửa phòng khám" : "Thêm phòng khám";
+    var actionName = Model.IsEdit ? "Edit" : "Create";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a class="active" asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Hồ sơ phòng khám</p>
+                <h1>@ViewData["Title"]</h1>
+                <p>Cập nhật thông tin hiển thị trong danh bạ y tế và ảnh đại diện lưu trên server.</p>
+            </div>
+
+            <a class="admin-secondary-link compact" asp-controller="AdminClinics" asp-action="Index">Quay lại</a>
+        </header>
+
+        <section class="admin-panel compact-panel admin-clinic-form-panel">
+            <form asp-controller="AdminClinics"
+                  asp-action="@actionName"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="admin-user-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <input asp-for="CurrentAvatarUrl" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+                <div class="admin-avatar-editor compact-avatar">
+                    <div class="admin-avatar-preview clinic-preview">
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentAvatarUrl))
+                        {
+                            <img src="@Model.CurrentAvatarUrl" alt="@Model.Name" />
+                        }
+                        else
+                        {
+                            <span>Ảnh</span>
+                        }
+                    </div>
+
+                    <label class="admin-file-field">
+                        <span>Ảnh phòng khám</span>
+                        <input asp-for="AvatarFile" type="file" accept="image/png,image/jpeg,image/webp" />
+                        <small>Lưu vào server tại <strong>/uploads/clinics</strong>, sau đó ghi URL tương đối vào SQL Server.</small>
+                        <span asp-validation-for="AvatarFile" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <div class="admin-form-grid">
+                    <label class="admin-field">
+                        <span>Tên phòng khám</span>
+                        <input asp-for="Name" placeholder="VD: Phòng khám Tâm lý An Nhiên" />
+                        <span asp-validation-for="Name" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Khoa/phòng ban</span>
+                        <input asp-for="Department" placeholder="Tâm lý lâm sàng, sức khỏe tinh thần..." />
+                        <span asp-validation-for="Department" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field wide">
+                        <span>Địa chỉ</span>
+                        <input asp-for="Address" placeholder="Số nhà, đường, phường/xã, quận/huyện..." />
+                        <span asp-validation-for="Address" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Giờ làm việc</span>
+                        <input asp-for="WorkingHours" placeholder="Thứ 2 - Thứ 7, 08:00 - 17:00" />
+                        <span asp-validation-for="WorkingHours" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Giá tham khảo</span>
+                        <input asp-for="PriceReference" placeholder="Từ 400.000đ/buổi" />
+                        <span asp-validation-for="PriceReference" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <label class="admin-field">
+                    <span>Dịch vụ</span>
+                    <textarea asp-for="Services" rows="5" placeholder="Nhập mỗi dịch vụ một dòng hoặc dán JSON array hợp lệ"></textarea>
+                    <span asp-validation-for="Services" class="admin-validation"></span>
+                </label>
+
+                <div class="admin-form-actions">
+                    <button type="submit" class="admin-primary-button compact">Lưu phòng khám</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminClinics" asp-action="Index">Hủy</a>
+                </div>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

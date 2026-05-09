@@ -1,0 +1,241 @@
+@model MedicalDirectoryViewModel
+
+@{
+    ViewData["Title"] = "Danh bạ y tế";
+}
+
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Danh bạ bác sĩ và phòng khám</h1>
+        <p class="text-muted mb-0">Quản lý dữ liệu mà app mobile đọc từ API <code>/api/doctors</code> và <code>/api/clinics</code>.</p>
+    </div>
+    <div class="text-muted small">
+        Bác sĩ: @Model.Doctors.Count | Phòng khám: @Model.Clinics.Count
+    </div>
+</div>
+
+@if (TempData["DirectorySuccess"] is string successMessage)
+{
+    <div class="alert alert-success" role="alert">@successMessage</div>
+}
+
+@if (TempData["DirectoryError"] is string errorMessage)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-xl-6">
+        <section class="border rounded-3 bg-white p-3 p-md-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Bác sĩ</h2>
+                <span class="badge text-bg-primary">@Model.Doctors.Count</span>
+            </div>
+
+            <form asp-action="CreateDoctor" method="post" class="border rounded-3 p-3 mb-4 bg-light">
+                @Html.AntiForgeryToken()
+                <h3 class="h6 mb-3">Thêm bác sĩ</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tên bác sĩ</label>
+                        <input class="form-control" name="Name" maxlength="255" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Chuyên khoa</label>
+                        <input class="form-control" name="Specialty" maxlength="255" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Học hàm / học vị</label>
+                        <input class="form-control" name="Degree" maxlength="255" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Kinh nghiệm</label>
+                        <input class="form-control" name="Experience" maxlength="255" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nơi làm việc</label>
+                        <input class="form-control" name="Workplace" maxlength="500" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Giá tham khảo</label>
+                        <input class="form-control" name="PriceReference" maxlength="255" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">URL ảnh đại diện</label>
+                        <input class="form-control" name="UrlAvatar" maxlength="1000" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Trọng tâm điều trị (mỗi dòng một mục)</label>
+                        <textarea class="form-control" name="TreatmentFocus" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Thêm bác sĩ</button>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.Doctors.Count == 0)
+            {
+                <div class="text-muted py-3">Chưa có bác sĩ nào.</div>
+            }
+            else
+            {
+                foreach (var doctor in Model.Doctors)
+                {
+                    <div class="border rounded-3 p-3 mb-3">
+                        <form asp-action="UpdateDoctor" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@doctor.Id" />
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tên bác sĩ</label>
+                                    <input class="form-control" name="Name" value="@doctor.Name" maxlength="255" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Chuyên khoa</label>
+                                    <input class="form-control" name="Specialty" value="@doctor.Specialty" maxlength="255" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Học hàm / học vị</label>
+                                    <input class="form-control" name="Degree" value="@doctor.Degree" maxlength="255" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Kinh nghiệm</label>
+                                    <input class="form-control" name="Experience" value="@doctor.Experience" maxlength="255" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Nơi làm việc</label>
+                                    <input class="form-control" name="Workplace" value="@doctor.Workplace" maxlength="500" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Giá tham khảo</label>
+                                    <input class="form-control" name="PriceReference" value="@doctor.PriceReference" maxlength="255" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">URL ảnh đại diện</label>
+                                    <input class="form-control" name="UrlAvatar" value="@doctor.UrlAvatar" maxlength="1000" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Trọng tâm điều trị (mỗi dòng một mục)</label>
+                                    <textarea class="form-control" name="TreatmentFocus" rows="2">@doctor.TreatmentFocus</textarea>
+                                </div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button type="submit" class="btn btn-outline-primary">Lưu bác sĩ</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <form asp-action="DeleteDoctor" method="post" class="mt-2" onsubmit="return confirm('Xóa bác sĩ này?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@doctor.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Xóa bác sĩ</button>
+                        </form>
+                    </div>
+                }
+            }
+        </section>
+    </div>
+
+    <div class="col-12 col-xl-6">
+        <section class="border rounded-3 bg-white p-3 p-md-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Phòng khám</h2>
+                <span class="badge text-bg-success">@Model.Clinics.Count</span>
+            </div>
+
+            <form asp-action="CreateClinic" method="post" class="border rounded-3 p-3 mb-4 bg-light">
+                @Html.AntiForgeryToken()
+                <h3 class="h6 mb-3">Thêm phòng khám</h3>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tên phòng khám</label>
+                        <input class="form-control" name="Name" maxlength="255" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Khoa / chuyên môn</label>
+                        <input class="form-control" name="Department" maxlength="255" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Địa chỉ</label>
+                        <input class="form-control" name="Address" maxlength="500" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Giờ làm việc</label>
+                        <input class="form-control" name="WorkingHours" maxlength="255" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Giá tham khảo</label>
+                        <input class="form-control" name="PriceReference" maxlength="255" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">URL ảnh phòng khám</label>
+                        <input class="form-control" name="UrlAvatar" maxlength="1000" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Dịch vụ (mỗi dòng một mục)</label>
+                        <textarea class="form-control" name="Services" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success">Thêm phòng khám</button>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.Clinics.Count == 0)
+            {
+                <div class="text-muted py-3">Chưa có phòng khám nào.</div>
+            }
+            else
+            {
+                foreach (var clinic in Model.Clinics)
+                {
+                    <div class="border rounded-3 p-3 mb-3">
+                        <form asp-action="UpdateClinic" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="Id" value="@clinic.Id" />
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tên phòng khám</label>
+                                    <input class="form-control" name="Name" value="@clinic.Name" maxlength="255" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Khoa / chuyên môn</label>
+                                    <input class="form-control" name="Department" value="@clinic.Department" maxlength="255" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Địa chỉ</label>
+                                    <input class="form-control" name="Address" value="@clinic.Address" maxlength="500" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Giờ làm việc</label>
+                                    <input class="form-control" name="WorkingHours" value="@clinic.WorkingHours" maxlength="255" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Giá tham khảo</label>
+                                    <input class="form-control" name="PriceReference" value="@clinic.PriceReference" maxlength="255" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">URL ảnh phòng khám</label>
+                                    <input class="form-control" name="UrlAvatar" value="@clinic.UrlAvatar" maxlength="1000" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Dịch vụ (mỗi dòng một mục)</label>
+                                    <textarea class="form-control" name="Services" rows="2">@clinic.Services</textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-outline-success">Lưu phòng khám</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <form asp-action="DeleteClinic" method="post" class="mt-2" onsubmit="return confirm('Xóa phòng khám này?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@clinic.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Xóa phòng khám</button>
+                        </form>
+                    </div>
+                }
+            }
+        </section>
+    </div>
+</div>

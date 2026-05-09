@@ -1,0 +1,128 @@
+@model server.Models.Admin.AdminPostFormViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.IsEdit ? "Sửa bài viết" : "Thêm bài viết";
+    var actionName = Model.IsEdit ? "Edit" : "Create";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a class="active" asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Bài viết</p>
+                <h1>@ViewData["Title"]</h1>
+                <p>Soạn nội dung, chọn tác giả, tải ảnh từ máy và quản lý trạng thái hiển thị.</p>
+            </div>
+
+            <a class="admin-secondary-link compact" asp-controller="AdminContent" asp-action="Index">Quay lại</a>
+        </header>
+
+        <section class="admin-panel compact-panel admin-content-form-panel">
+            <form asp-controller="AdminContent"
+                  asp-action="@actionName"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="admin-user-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <input asp-for="CurrentMediaUrl" type="hidden" />
+                <input asp-for="MediaType" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+                <label class="admin-field">
+                    <span>Tác giả</span>
+                    <select asp-for="UserId" asp-items="Model.Authors"></select>
+                    <span asp-validation-for="UserId" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Nội dung bài viết</span>
+                    <textarea asp-for="Content" rows="7" placeholder="Nhập nội dung hiển thị trên app..."></textarea>
+                    <span asp-validation-for="Content" class="admin-validation"></span>
+                </label>
+
+                <div class="admin-post-media-editor">
+                    <div class="admin-post-media-preview" id="postMediaPreview">
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentMediaUrl))
+                        {
+                            <img src="@Model.CurrentMediaUrl" alt="Ảnh bài viết" />
+                        }
+                        else
+                        {
+                            <span>Ảnh bài viết</span>
+                        }
+                    </div>
+
+                    <label class="admin-file-field">
+                        <span>Ảnh bài viết</span>
+                        <input asp-for="MediaFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-preview-target="postMediaPreview" />
+                        <small>Lưu vào server tại <strong>/uploads/posts</strong>, sau đó ghi URL tương đối vào SQL Server.</small>
+                        <span asp-validation-for="MediaFile" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <label class="admin-check-field">
+                    <input asp-for="IsHidden" />
+                    <span>Ẩn bài viết khỏi app</span>
+                </label>
+
+                <div class="admin-form-actions">
+                    <button type="submit" class="admin-primary-button compact">Lưu bài viết</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminContent" asp-action="Index">Hủy</a>
+                </div>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const input = document.querySelector('[data-preview-target="postMediaPreview"]');
+            const preview = document.getElementById("postMediaPreview");
+
+            if (!input || !preview) {
+                return;
+            }
+
+            input.addEventListener("change", () => {
+                const file = input.files && input.files[0];
+                if (!file || !file.type.startsWith("image/")) {
+                    return;
+                }
+
+                const imageUrl = URL.createObjectURL(file);
+                preview.innerHTML = "";
+
+                const image = document.createElement("img");
+                image.src = imageUrl;
+                image.alt = "Xem trước ảnh bài viết";
+                image.onload = () => URL.revokeObjectURL(imageUrl);
+
+                preview.appendChild(image);
+            });
+        })();
+    </script>
+}

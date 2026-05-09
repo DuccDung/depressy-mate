@@ -69,6 +69,8 @@ builder.Services
         options.SaveTokens = true;
         options.Scope.Clear();
         options.Scope.Add("public_profile");
+        options.Scope.Add("email");
+        options.Fields.Add("email");
         options.Fields.Add("name");
         options.Fields.Add("picture");
         options.Events.OnCreatingTicket = context =>

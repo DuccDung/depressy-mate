@@ -33,25 +33,6 @@ export const AuthService = {
   },
 
   /**
-   * Fetch user profile from Facebook using the access token
-   */
-  async fetchFacebookUserInfo(accessToken: string): Promise<SocialUser | null> {
-    try {
-      const response = await fetch(
-        `https://graph.facebook.com/me?access_token=${accessToken}&fields=id,name,email,picture.type(large)`
-      );
-      const user = await response.json();
-      return {
-        name: user.name,
-        email: user.email,
-        avatar: user.picture?.data?.url,
-      };
-    } catch {
-      return null;
-    }
-  },
-
-  /**
    * Display welcome message
    */
   showWelcomeMessage(user: SocialUser) {

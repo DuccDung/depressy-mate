@@ -21,6 +21,7 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  GoogleLogin: undefined;
 };
 
 type Props = {
@@ -56,7 +57,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login, loginWithFacebook } = useAuth();
+  const { login } = useAuth();
 
   const validateForm = () => {
     const nextErrors: LoginErrors = {};
@@ -95,22 +96,8 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
-  const handleFacebookLogin = async () => {
-    setLoading(true);
-    try {
-      await loginWithFacebook();
-    } catch (error: any) {
-      Alert.alert(
-        'Đăng nhập Facebook thất bại',
-        getApiErrorMessage(error, 'Không thể đăng nhập bằng Facebook. Vui lòng thử lại.')
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleLogin = () => {
-    Alert.alert('Chưa khả dụng', 'Đăng nhập Google trên app chưa được kết nối với server.');
+    navigation.navigate('GoogleLogin');
   };
 
   return (
@@ -216,10 +203,6 @@ export default function LoginScreen({ navigation }: Props) {
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin} disabled={loading}>
-                <Ionicons name="logo-facebook" size={20} color={THEME_COLORS.primary} />
-                <Text style={styles.socialButtonText}>Facebook</Text>
-              </TouchableOpacity>
             </View>
 
             <TouchableOpacity

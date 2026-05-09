@@ -1,0 +1,154 @@
+@model server.Models.Admin.AdminDoctorFormViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.IsEdit ? "Sửa bác sĩ" : "Thêm bác sĩ";
+    var actionName = Model.IsEdit ? "Edit" : "Create";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a class="active" asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Hồ sơ bác sĩ</p>
+                <h1>@ViewData["Title"]</h1>
+                <p>Cập nhật thông tin chuyên môn, nơi công tác, chi phí và ảnh đại diện.</p>
+            </div>
+
+            <a class="admin-secondary-link compact" asp-controller="AdminDoctors" asp-action="Index">Quay lại</a>
+        </header>
+
+        <section class="admin-panel compact-panel admin-doctor-form-panel">
+            <form asp-controller="AdminDoctors"
+                  asp-action="@actionName"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="admin-user-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <input asp-for="CurrentAvatarUrl" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+                <div class="admin-avatar-editor compact-avatar">
+                    <div class="admin-avatar-preview doctor-preview" id="doctorAvatarPreview">
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentAvatarUrl))
+                        {
+                            <img src="@Model.CurrentAvatarUrl" alt="@Model.Name" />
+                        }
+                        else
+                        {
+                            <span>Ảnh</span>
+                        }
+                    </div>
+
+                    <label class="admin-file-field">
+                        <span>Ảnh bác sĩ</span>
+                        <input asp-for="AvatarFile" type="file" accept="image/png,image/jpeg,image/webp" data-preview-target="doctorAvatarPreview" />
+                        <small>Lưu vào server tại <strong>/uploads/doctors</strong>, sau đó ghi URL tương đối vào SQL Server.</small>
+                        <span asp-validation-for="AvatarFile" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <div class="admin-form-grid">
+                    <label class="admin-field">
+                        <span>Tên bác sĩ</span>
+                        <input asp-for="Name" placeholder="VD: ThS. Nguyễn An" />
+                        <span asp-validation-for="Name" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Chuyên khoa</span>
+                        <input asp-for="Specialty" placeholder="Tâm lý lâm sàng, Tâm thần..." />
+                        <span asp-validation-for="Specialty" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Học vị</span>
+                        <input asp-for="Degree" placeholder="ThS., BS.CKII..." />
+                        <span asp-validation-for="Degree" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Kinh nghiệm</span>
+                        <input asp-for="Experience" placeholder="10 năm kinh nghiệm" />
+                        <span asp-validation-for="Experience" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Nơi công tác</span>
+                        <input asp-for="Workplace" placeholder="Bệnh viện, phòng khám..." />
+                        <span asp-validation-for="Workplace" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Giá tham khảo</span>
+                        <input asp-for="PriceReference" placeholder="500.000đ/buổi" />
+                        <span asp-validation-for="PriceReference" class="admin-validation"></span>
+                    </label>
+                </div>
+
+                <label class="admin-field">
+                    <span>Trọng tâm điều trị</span>
+                    <textarea asp-for="TreatmentFocus" rows="4" placeholder="Có thể nhập text hoặc JSON theo dữ liệu seed hiện tại"></textarea>
+                    <span asp-validation-for="TreatmentFocus" class="admin-validation"></span>
+                </label>
+
+                <div class="admin-form-actions">
+                    <button type="submit" class="admin-primary-button compact">Lưu bác sĩ</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminDoctors" asp-action="Index">Hủy</a>
+                </div>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const input = document.querySelector('[data-preview-target="doctorAvatarPreview"]');
+            const preview = document.getElementById("doctorAvatarPreview");
+
+            if (!input || !preview) {
+                return;
+            }
+
+            input.addEventListener("change", () => {
+                const file = input.files && input.files[0];
+                if (!file || !file.type.startsWith("image/")) {
+                    return;
+                }
+
+                const imageUrl = URL.createObjectURL(file);
+                preview.innerHTML = "";
+
+                const image = document.createElement("img");
+                image.src = imageUrl;
+                image.alt = "Xem trước ảnh bác sĩ";
+                image.onload = () => URL.revokeObjectURL(imageUrl);
+
+                preview.appendChild(image);
+            });
+        })();
+    </script>
+}

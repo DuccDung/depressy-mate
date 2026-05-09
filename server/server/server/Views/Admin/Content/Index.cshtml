@@ -1,0 +1,154 @@
+@model server.Models.Admin.AdminContentIndexViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý nội dung";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a class="active" asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Cộng đồng</p>
+                <h1>Quản lý nội dung</h1>
+                <p>Duyệt, chỉnh sửa, ẩn hoặc xóa các bài viết hiển thị trong app.</p>
+            </div>
+
+            <a class="admin-primary-link compact" asp-controller="AdminContent" asp-action="Create">Thêm bài viết</a>
+        </header>
+
+        @if (TempData["AdminContentSuccess"] is string successMessage)
+        {
+            <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
+        }
+
+        @if (TempData["AdminContentError"] is string errorMessage)
+        {
+            <div class="admin-alert admin-alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <section class="admin-content-overview" aria-label="Thống kê nội dung">
+            <article>
+                <span>Tổng bài viết</span>
+                <strong>@Model.TotalPosts</strong>
+            </article>
+            <article>
+                <span>Đang hiển thị</span>
+                <strong>@Model.ActivePosts</strong>
+            </article>
+            <article>
+                <span>Đã ẩn</span>
+                <strong>@Model.HiddenPosts</strong>
+            </article>
+            <article>
+                <span>Có ảnh</span>
+                <strong>@Model.WithMediaPosts</strong>
+            </article>
+        </section>
+
+        <section class="admin-panel compact-panel">
+            <form asp-controller="AdminContent" asp-action="Index" method="get" class="admin-content-filter">
+                <label class="admin-field">
+                    <span>Tìm kiếm</span>
+                    <input name="search" value="@Model.Search" placeholder="Nội dung, tên tác giả, email..." />
+                </label>
+
+                <label class="admin-field">
+                    <span>Trạng thái</span>
+                    <select name="status">
+                        <option value="active" selected="@(Model.Status == "active")">Đang hiển thị</option>
+                        <option value="hidden" selected="@(Model.Status == "hidden")">Đã ẩn</option>
+                        <option value="all" selected="@(Model.Status == "all")">Tất cả</option>
+                    </select>
+                </label>
+
+                <div class="admin-filter-actions">
+                    <button type="submit" class="admin-primary-button compact">Lọc</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminContent" asp-action="Index">Xóa lọc</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="admin-content-list" aria-label="Danh sách nội dung">
+            @if (Model.Posts.Count == 0)
+            {
+                <div class="admin-panel compact-panel admin-empty-cell">Chưa có bài viết phù hợp.</div>
+            }
+            else
+            {
+                foreach (var post in Model.Posts)
+                {
+                    <article class="admin-content-card @(post.IsHidden ? "is-hidden" : string.Empty)">
+                        <div class="admin-content-author">
+                            @if (!string.IsNullOrWhiteSpace(post.AuthorAvatarUrl))
+                            {
+                                <img src="@post.AuthorAvatarUrl" alt="@post.AuthorName" />
+                            }
+                            else
+                            {
+                                <span>@post.AuthorName.Substring(0, 1).ToUpperInvariant()</span>
+                            }
+
+                            <div>
+                                <h2>@post.AuthorName</h2>
+                                <p>@post.AuthorEmail</p>
+                            </div>
+                        </div>
+
+                        <div class="admin-content-body">
+                            <div class="admin-content-status-row">
+                                <span class="admin-status-pill @(post.IsHidden ? "muted" : "success")">@(post.IsHidden ? "Đã ẩn" : "Đang hiển thị")</span>
+                                <small>@post.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+
+                            <p>@(string.IsNullOrWhiteSpace(post.ContentPreview) ? "Bài viết chỉ có hình ảnh." : post.ContentPreview)</p>
+
+                            @if (!string.IsNullOrWhiteSpace(post.MediaUrl))
+                            {
+                                <div class="admin-content-media">
+                                    <img src="@post.MediaUrl" alt="Ảnh bài viết" />
+                                </div>
+                            }
+
+                            <div class="admin-content-foot">
+                                <span>@post.LikeCount lượt thích</span>
+                                <span>@post.CommentCount bình luận</span>
+                                <span>Cập nhật @post.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                            </div>
+                        </div>
+
+                        <div class="admin-content-actions">
+                            <a asp-controller="AdminContent" asp-action="Edit" asp-route-id="@post.Id">Sửa</a>
+                            <form asp-controller="AdminContent" asp-action="Toggle" asp-route-id="@post.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit">@(post.IsHidden ? "Khôi phục" : "Ẩn")</button>
+                            </form>
+                            <form asp-controller="AdminContent" asp-action="Delete" asp-route-id="@post.Id" method="post" onsubmit="return confirm('Bạn chắc chắn muốn xóa vĩnh viễn bài viết này?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="danger">Xóa</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            }
+        </section>
+    </section>
+</main>
