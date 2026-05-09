@@ -27,8 +27,7 @@ export const AuthService = {
         email: user.email,
         avatar: user.picture,
       };
-    } catch (error) {
-      console.error('Error fetching Google user info:', error);
+    } catch {
       return null;
     }
   },
@@ -47,8 +46,7 @@ export const AuthService = {
         email: user.email,
         avatar: user.picture?.data?.url,
       };
-    } catch (error) {
-      console.error('Error fetching Facebook user info:', error);
+    } catch {
       return null;
     }
   },

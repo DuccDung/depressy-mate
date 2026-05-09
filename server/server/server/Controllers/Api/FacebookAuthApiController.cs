@@ -1,5 +1,8 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Facebook;
@@ -18,11 +21,22 @@ public class FacebookAuthApiController : ControllerBase
 
     private readonly DepressyMateContext _context;
     private readonly JwtTokenService _jwtTokenService;
+    private readonly HttpClient _httpClient;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<FacebookAuthApiController> _logger;
 
-    public FacebookAuthApiController(DepressyMateContext context, JwtTokenService jwtTokenService)
+    public FacebookAuthApiController(
+        DepressyMateContext context,
+        JwtTokenService jwtTokenService,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<FacebookAuthApiController> logger)
     {
         _context = context;
         _jwtTokenService = jwtTokenService;
+        _httpClient = httpClientFactory.CreateClient();
+        _configuration = configuration;
+        _logger = logger;
     }
 
     [HttpGet("facebook")]
@@ -38,6 +52,74 @@ public class FacebookAuthApiController : ControllerBase
         };
 
         return Challenge(properties, FacebookDefaults.AuthenticationScheme);
+    }
+
+    [HttpPost("facebook")]
+    public async Task<IActionResult> FacebookTokenLogin(
+        FacebookTokenLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.AccessToken))
+        {
+            return BadRequest(new { error = "Facebook accessToken is required." });
+        }
+
+        FacebookProfile profile;
+        try
+        {
+            profile = await GetFacebookProfileAsync(request.AccessToken.Trim(), cancellationToken);
+        }
+        catch (FacebookTokenException exception)
+        {
+            return Unauthorized(new { error = exception.Message });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Could not validate Facebook access token.");
+            return StatusCode(502, new { error = "Không thể xác thực Facebook access token. Vui lòng thử lại." });
+        }
+
+        var email = string.IsNullOrWhiteSpace(profile.Email)
+            ? $"facebook_{profile.Id}@facebook.local"
+            : profile.Email.Trim().ToLowerInvariant();
+
+        var user = await _context.Users
+            .Include(item => item.Profile)
+            .FirstOrDefaultAsync(item => item.FacebookId == profile.Id, cancellationToken);
+
+        user ??= await _context.Users
+            .Include(item => item.Profile)
+            .FirstOrDefaultAsync(item => item.Email == email, cancellationToken);
+
+        if (user is null)
+        {
+            user = CreateFacebookUser(
+                profile.Id,
+                email,
+                profile.Name,
+                profile.Picture?.Data?.Url,
+                !string.IsNullOrWhiteSpace(profile.Email));
+            _context.Users.Add(user);
+        }
+        else
+        {
+            UpdateFacebookUser(
+                user,
+                profile.Id,
+                profile.Name,
+                profile.Picture?.Data?.Url,
+                !string.IsNullOrWhiteSpace(profile.Email));
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var token = _jwtTokenService.Generate(user);
+        return Ok(new
+        {
+            message = "Facebook login successful.",
+            token,
+            user = ToAuthUser(user)
+        });
     }
 
     [HttpGet("facebook/callback")]
@@ -87,6 +169,102 @@ public class FacebookAuthApiController : ControllerBase
 
         var token = _jwtTokenService.Generate(user);
         return RedirectWithAuthResult(safeReturnUrl, token, ToAuthUser(user));
+    }
+
+    private async Task<FacebookProfile> GetFacebookProfileAsync(
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        var appId = _configuration["Authentication:Facebook:AppId"];
+        var appSecret = _configuration["Authentication:Facebook:AppSecret"];
+
+        if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(appSecret))
+        {
+            throw new InvalidOperationException("Facebook AppId/AppSecret is not configured.");
+        }
+
+        await ValidateFacebookTokenForAppAsync(accessToken, appId, appSecret, cancellationToken);
+
+        var query = new Dictionary<string, string?>
+        {
+            ["fields"] = "id,name,email,picture.type(large)",
+            ["access_token"] = accessToken
+        };
+
+        if (!string.IsNullOrWhiteSpace(appSecret))
+        {
+            query["appsecret_proof"] = CreateAppSecretProof(accessToken, appSecret);
+        }
+
+        using var response = await _httpClient.GetAsync(
+            BuildFacebookGraphUrl("/me", query),
+            cancellationToken);
+
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Facebook /me validation failed with status {StatusCode}.", response.StatusCode);
+            throw new FacebookTokenException("Facebook access token không hợp lệ hoặc đã hết hạn.");
+        }
+
+        var profile = JsonSerializer.Deserialize<FacebookProfile>(json);
+        if (profile is null || string.IsNullOrWhiteSpace(profile.Id))
+        {
+            throw new FacebookTokenException("Facebook không trả về thông tin người dùng hợp lệ.");
+        }
+
+        return profile;
+    }
+
+    private async Task ValidateFacebookTokenForAppAsync(
+        string accessToken,
+        string appId,
+        string appSecret,
+        CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.GetAsync(
+            BuildFacebookGraphUrl("/debug_token", new Dictionary<string, string?>
+            {
+                ["input_token"] = accessToken,
+                ["access_token"] = $"{appId}|{appSecret}"
+            }),
+            cancellationToken);
+
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Facebook debug_token failed with status {StatusCode}.", response.StatusCode);
+            throw new FacebookTokenException("Facebook access token không hợp lệ hoặc đã hết hạn.");
+        }
+
+        var debugResult = JsonSerializer.Deserialize<FacebookDebugTokenResponse>(json);
+        var data = debugResult?.Data;
+        if (data?.IsValid != true || string.IsNullOrWhiteSpace(data.UserId))
+        {
+            throw new FacebookTokenException("Facebook access token không hợp lệ hoặc đã hết hạn.");
+        }
+
+        if (!string.Equals(data.AppId, appId, StringComparison.Ordinal))
+        {
+            throw new FacebookTokenException("Facebook access token không thuộc ứng dụng này.");
+        }
+    }
+
+    private static string BuildFacebookGraphUrl(string path, IReadOnlyDictionary<string, string?> query)
+    {
+        var queryString = string.Join("&", query
+            .Where(item => !string.IsNullOrWhiteSpace(item.Value))
+            .Select(item => $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value!)}"));
+
+        return $"https://graph.facebook.com{path}?{queryString}";
+    }
+
+    private static string CreateAppSecretProof(string accessToken, string appSecret)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(appSecret);
+        var tokenBytes = Encoding.UTF8.GetBytes(accessToken);
+        using var hmac = new HMACSHA256(keyBytes);
+        return Convert.ToHexString(hmac.ComputeHash(tokenBytes)).ToLowerInvariant();
     }
 
     private static User CreateFacebookUser(
@@ -216,4 +394,59 @@ public class FacebookAuthApiController : ControllerBase
 
         return $"{url}{separator}{query}";
     }
+
+    private sealed class FacebookTokenException : Exception
+    {
+        public FacebookTokenException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    private sealed class FacebookDebugTokenResponse
+    {
+        [JsonPropertyName("data")]
+        public FacebookDebugTokenData? Data { get; set; }
+    }
+
+    private sealed class FacebookDebugTokenData
+    {
+        [JsonPropertyName("app_id")]
+        public string? AppId { get; set; }
+
+        [JsonPropertyName("is_valid")]
+        public bool IsValid { get; set; }
+
+        [JsonPropertyName("user_id")]
+        public string? UserId { get; set; }
+    }
+
+    private sealed class FacebookProfile
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("picture")]
+        public FacebookPicture? Picture { get; set; }
+    }
+
+    private sealed class FacebookPicture
+    {
+        [JsonPropertyName("data")]
+        public FacebookPictureData? Data { get; set; }
+    }
+
+    private sealed class FacebookPictureData
+    {
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
+    }
 }
+
+public record FacebookTokenLoginRequest(string AccessToken);

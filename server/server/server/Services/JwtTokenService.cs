@@ -18,7 +18,7 @@ public class JwtTokenService
     public string Generate(User user)
     {
         var secret = _configuration["Jwt:Secret"]
-            ?? throw new InvalidOperationException("Missing Jwt:Secret in appsettings.json");
+            ?? throw new InvalidOperationException("Missing Jwt:Secret in .env or environment variables.");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

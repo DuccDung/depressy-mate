@@ -1,9 +1,12 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Linking } from 'react-native';
-import api, { API_ORIGIN } from '../services/api';
+import { NativeModules } from 'react-native';
+import { AccessToken, LoginManager, Settings } from 'react-native-fbsdk-next';
+import api from '../services/api';
 
-const FACEBOOK_LOGIN_TIMEOUT_MS = 3 * 60 * 1000;
+const FACEBOOK_READ_PERMISSIONS = ['public_profile', 'email'];
+const FACEBOOK_SDK_UNAVAILABLE_MESSAGE =
+  'Facebook SDK chỉ hoạt động trong development build/native build. Expo Go không hỗ trợ module này.';
 
 interface User {
   id: string;
@@ -27,10 +30,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const isFacebookSdkAvailable = () => {
+  return Boolean(
+    NativeModules.FBSettings &&
+      NativeModules.FBLoginManager &&
+      NativeModules.FBAccessToken
+  );
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isFacebookSdkAvailable()) {
+      return;
+    }
+
+    try {
+      Settings.initializeSDK();
+    } catch {
+    }
+  }, []);
 
   // Khi app khởi động, kiểm tra token đã lưu
   useEffect(() => {
@@ -42,8 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
         }
-      } catch (err) {
-        console.error('Failed to load auth state:', err);
+      } catch {
       } finally {
         setIsLoading(false);
       }
@@ -55,11 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const response = await api.post('/auth/login', { email, password });
     const { token: newToken, user: userData } = response.data;
 
-    await AsyncStorage.setItem('userToken', newToken);
-    await AsyncStorage.setItem('userData', JSON.stringify(userData));
-
-    setToken(newToken);
-    setUser(userData);
+    await persistAuthSession(newToken, userData);
   };
 
   const requestRegistrationOtp = async (email: string, password: string, fullName: string) => {
@@ -70,60 +87,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const response = await api.post('/auth/register/verify-otp', { email, otp });
     const { token: newToken, user: userData } = response.data;
 
-    await AsyncStorage.setItem('userToken', newToken);
-    await AsyncStorage.setItem('userData', JSON.stringify(userData));
-
-    setToken(newToken);
-    setUser(userData);
+    await persistAuthSession(newToken, userData);
   };
 
   const loginWithFacebook = async () => {
-    const redirectUrl = 'frontend://auth/facebook';
-    const loginUrl = `${API_ORIGIN}/api/auth/facebook?returnUrl=${encodeURIComponent(redirectUrl)}`;
+    if (!isFacebookSdkAvailable()) {
+      throw new Error(FACEBOOK_SDK_UNAVAILABLE_MESSAGE);
+    }
 
-    const callbackUrl = await new Promise<string>((resolve, reject) => {
-      let timeout: ReturnType<typeof setTimeout> | null = null;
-      const subscription = Linking.addEventListener('url', ({ url }) => {
-        if (!url.startsWith(redirectUrl)) {
-          return;
-        }
+    LoginManager.logOut();
 
-        cleanup();
-        resolve(url);
-      });
+    const loginResult = await LoginManager.logInWithPermissions(FACEBOOK_READ_PERMISSIONS);
+    if (loginResult.isCancelled) {
+      throw new Error('Bạn đã hủy đăng nhập Facebook.');
+    }
 
-      const cleanup = () => {
-        subscription.remove();
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-      };
+    const facebookToken = await AccessToken.getCurrentAccessToken();
+    if (!facebookToken?.accessToken) {
+      throw new Error('Facebook không trả về access token hợp lệ.');
+    }
 
-      timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error('Facebook login timed out. Please try again.'));
-      }, FACEBOOK_LOGIN_TIMEOUT_MS);
-
-      Linking.openURL(loginUrl).catch((error) => {
-        cleanup();
-        reject(error);
-      });
+    const response = await api.post('/auth/facebook', {
+      accessToken: facebookToken.accessToken,
     });
+    const { token: newToken, user: userData } = response.data;
 
-    const queryString = callbackUrl.split('?')[1] ?? '';
-    const params = new URLSearchParams(queryString);
-    const error = params.get('error');
-    if (error) {
-      throw new Error(error);
-    }
+    await persistAuthSession(newToken, userData);
+  };
 
-    const newToken = params.get('token');
-    const userJson = params.get('user');
-    if (!newToken || !userJson) {
-      throw new Error('Facebook login response is invalid.');
-    }
-
-    const userData = JSON.parse(userJson);
+  const persistAuthSession = async (newToken: string, userData: User) => {
     await AsyncStorage.setItem('userToken', newToken);
     await AsyncStorage.setItem('userData', JSON.stringify(userData));
 
@@ -134,6 +126,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = requestRegistrationOtp;
 
   const logout = async () => {
+    if (isFacebookSdkAvailable()) {
+      LoginManager.logOut();
+    }
     await AsyncStorage.removeItem('userToken');
     await AsyncStorage.removeItem('userData');
     setToken(null);

@@ -2,9 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
+using server.Infrastructure;
 using server.Models;
 using server.Services;
 using System.Security.Claims;
+
+DotEnv.Load(
+    Path.Combine(Directory.GetCurrentDirectory(), ".env"),
+    Path.Combine(AppContext.BaseDirectory, ".env"),
+    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".env")));
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<DepressyMateContext>(options =>
@@ -13,6 +19,7 @@ builder.Services.AddDbContext<DepressyMateContext>(options =>
     ));
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.Configure<SupportOptions>(builder.Configuration.GetSection("Support"));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));

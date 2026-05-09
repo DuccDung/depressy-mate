@@ -13,15 +13,10 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../contexts/AuthContext';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import { AuthService } from '../services/authService';
-
-WebBrowser.maybeCompleteAuthSession();
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../contexts/AuthContext';
+import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -32,7 +27,13 @@ type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 };
 
-// Custom Lavender Theme Colors based on user request
+type LoginErrors = {
+  email?: string;
+  password?: string;
+};
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const THEME_COLORS = {
   background: '#F3F0FF',
   primary: '#7B61FF',
@@ -40,76 +41,76 @@ const THEME_COLORS = {
   secondaryText: '#494454',
   divider: '#E0E0E0',
   cardBg: '#FFFFFF',
+  danger: '#D92D20',
+  mutedBg: '#F9F9FF',
+  border: '#E8E8FF',
+};
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+  return error?.response?.data?.error || error?.message || fallback;
 };
 
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<LoginErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, loginWithFacebook } = useAuth();
 
-  // Google Auth Request
-  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    androidClientId: 'YOUR_GOOGLE_ANDROID_CLIENT_ID',
-    iosClientId: 'YOUR_GOOGLE_IOS_CLIENT_ID',
-    webClientId: 'YOUR_GOOGLE_WEB_CLIENT_ID',
-  });
+  const validateForm = () => {
+    const nextErrors: LoginErrors = {};
+    const normalizedEmail = email.trim();
 
-  // Handle Google Response
-  React.useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { authentication } = googleResponse;
-      if (authentication?.accessToken) {
-        handleSocialLoginSuccess('google', authentication.accessToken);
-      }
-    }
-  }, [googleResponse]);
-
-  const handleSocialLoginSuccess = async (provider: 'google', token: string) => {
-    setLoading(true);
-    let socialUser = null;
-
-    if (provider === 'google') {
-      socialUser = await AuthService.fetchGoogleUserInfo(token);
+    if (!normalizedEmail) {
+      nextErrors.email = 'Vui lòng nhập email.';
+    } else if (!EMAIL_REGEX.test(normalizedEmail)) {
+      nextErrors.email = 'Email không hợp lệ.';
     }
 
-    setLoading(false);
-    if (socialUser) {
-      AuthService.showWelcomeMessage(socialUser);
-      // Here you would typically send this data to your backend to create/login user
+    if (!password.trim()) {
+      nextErrors.password = 'Vui lòng nhập mật khẩu.';
     }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu.');
+    if (!validateForm()) {
+      Alert.alert('Thông tin chưa hợp lệ', 'Vui lòng kiểm tra lại email và mật khẩu.');
       return;
     }
 
     setLoading(true);
     try {
-      await login(email.trim(), password);
-    } catch (err: any) {
-      const message = err.response?.data?.error || 'Đăng nhập thất bại. Vui lòng thử lại.';
-      Alert.alert('Lỗi', message);
+      await login(email.trim().toLowerCase(), password);
+    } catch (error: any) {
+      Alert.alert(
+        'Đăng nhập thất bại',
+        getApiErrorMessage(error, 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.')
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    promptGoogleAsync();
   };
 
   const handleFacebookLogin = async () => {
     setLoading(true);
     try {
       await loginWithFacebook();
-    } catch (err: any) {
-      Alert.alert('Lá»—i', err.message || 'ÄÄƒng nháº­p Facebook tháº¥t báº¡i.');
+    } catch (error: any) {
+      Alert.alert(
+        'Đăng nhập Facebook thất bại',
+        getApiErrorMessage(error, 'Không thể đăng nhập bằng Facebook. Vui lòng thử lại.')
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    Alert.alert('Chưa khả dụng', 'Đăng nhập Google trên app chưa được kết nối với server.');
   };
 
   return (
@@ -121,8 +122,8 @@ export default function LoginScreen({ navigation }: Props) {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.brandContainer}>
               <Image
@@ -135,38 +136,62 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.slogan}>Lắng nghe tâm trí, thấu hiểu chính mình</Text>
           </View>
 
-          {/* Form Card */}
           <View style={[styles.card, Shadows.ambient]}>
             <Text style={styles.cardTitle}>Đăng nhập</Text>
+            <Text style={styles.cardSubtitle}>Chào mừng bạn quay lại.</Text>
 
-            {/* Email Input */}
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
               <Ionicons name="mail-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Email của bạn"
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor="#9CA3AF"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  if (errors.email) {
+                    setErrors((current) => ({ ...current, email: undefined }));
+                  }
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                editable={!loading}
               />
             </View>
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-            {/* Password Input */}
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
               <Ionicons name="lock-closed-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Mật khẩu"
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor="#9CA3AF"
                 value={password}
-                onChangeText={setPassword}
-                secureTextEntry
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (errors.password) {
+                    setErrors((current) => ({ ...current, password: undefined }));
+                  }
+                }}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+                editable={!loading}
               />
+              <TouchableOpacity
+                onPress={() => setShowPassword((current) => !current)}
+                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={THEME_COLORS.secondaryText}
+                />
+              </TouchableOpacity>
             </View>
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-            {/* Login Button */}
             <TouchableOpacity
               style={[styles.primaryButton, loading && styles.buttonDisabled]}
               onPress={handleLogin}
@@ -179,30 +204,28 @@ export default function LoginScreen({ navigation }: Props) {
               )}
             </TouchableOpacity>
 
-            {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>Hoặc</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social Buttons */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={loading}>
                 <Ionicons name="logo-google" size={20} color={THEME_COLORS.primary} />
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin}>
+              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin} disabled={loading}>
                 <Ionicons name="logo-facebook" size={20} color={THEME_COLORS.primary} />
                 <Text style={styles.socialButtonText}>Facebook</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Navigation Link */}
             <TouchableOpacity
               style={styles.linkButton}
               onPress={() => navigation.navigate('Register')}
+              disabled={loading}
             >
               <Text style={styles.linkText}>
                 Chưa có tài khoản? <Text style={styles.linkBold}>Đăng ký ngay</Text>
@@ -231,7 +254,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 36,
   },
   brandContainer: {
     flexDirection: 'row',
@@ -239,35 +262,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   logo: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     marginRight: 12,
   },
   appName: {
-    fontSize: 40,
+    fontSize: 34,
     fontWeight: '800',
     color: Colors.light.primary,
     fontFamily: 'Manrope',
     includeFontPadding: false,
   },
   slogan: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: THEME_COLORS.text,
-    opacity: 0.7,
+    fontSize: 15,
+    color: THEME_COLORS.secondaryText,
     fontFamily: 'Manrope',
     textAlign: 'center',
   },
   card: {
     backgroundColor: THEME_COLORS.cardBg,
-    borderRadius: 32,
+    borderRadius: 28,
     padding: Spacing.lg,
     width: '100%',
   },
   cardTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: THEME_COLORS.text,
+    textAlign: 'center',
+    fontFamily: 'Manrope',
+  },
+  cardSubtitle: {
+    color: THEME_COLORS.secondaryText,
+    fontSize: 14,
+    marginTop: 6,
     marginBottom: Spacing.lg,
     textAlign: 'center',
     fontFamily: 'Manrope',
@@ -275,13 +303,16 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9F9FF',
+    backgroundColor: THEME_COLORS.mutedBg,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: '#E8E8FF',
-    marginBottom: Spacing.md,
+    borderColor: THEME_COLORS.border,
+    marginTop: Spacing.sm,
     paddingHorizontal: 16,
     height: 56,
+  },
+  inputError: {
+    borderColor: THEME_COLORS.danger,
   },
   inputIcon: {
     marginRight: 12,
@@ -292,21 +323,28 @@ const styles = StyleSheet.create({
     color: THEME_COLORS.text,
     fontFamily: 'Manrope',
   },
+  errorText: {
+    color: THEME_COLORS.danger,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+    fontFamily: 'Manrope',
+  },
   primaryButton: {
     backgroundColor: THEME_COLORS.primary,
     borderRadius: BorderRadius.full,
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.lg,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     fontFamily: 'Manrope',
   },
   dividerContainer: {
@@ -321,27 +359,29 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     marginHorizontal: 12,
-    color: '#A0A0A0',
+    color: '#8F8A99',
     fontSize: 14,
     fontFamily: 'Manrope',
   },
   socialRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
   socialButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: THEME_COLORS.primary,
+    borderColor: THEME_COLORS.border,
     borderRadius: BorderRadius.md,
-    paddingVertical: 12,
-    width: '48%',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 13,
   },
   socialButtonText: {
-    color: THEME_COLORS.primary,
-    fontWeight: '600',
+    color: THEME_COLORS.text,
+    fontWeight: '700',
     marginLeft: 8,
     fontFamily: 'Manrope',
   },
@@ -356,9 +396,6 @@ const styles = StyleSheet.create({
   },
   linkBold: {
     color: THEME_COLORS.primary,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
 });
-
-
-

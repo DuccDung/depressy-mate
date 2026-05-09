@@ -9,7 +9,17 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +30,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.ngocanh208.frontend"
+      "package": "com.ngocanh208.frontend",
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "output": "static",
@@ -38,6 +51,17 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "3210662712474768",
+          "displayName": "Depressy Mate",
+          "scheme": "fb3210662712474768",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true
+        }
       ]
     ],
     "experiments": {
@@ -46,8 +70,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "44e16df8-cfc4-4e75-8791-cc7644bac357"
+        "projectId": "908ebce8-13e7-4e20-b038-01a3f781cab4"
       }
-    }
+    },
+    "owner": "duccdung"
   }
 }
