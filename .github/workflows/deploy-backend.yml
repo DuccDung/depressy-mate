@@ -1,0 +1,26 @@
+name: Deploy Backend to Fly.io
+
+on:
+  push:
+    branches:
+      - main # Update this if the default branch is named something else
+    paths:
+      - 'backend/**' # Triggers only when the backend folder changes
+
+jobs:
+  deploy:
+    name: Deploy App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        working-directory: ./backend # Tells Fly to look for fly.toml in this folder
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

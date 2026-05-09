@@ -1,0 +1,52 @@
+[
+  {
+    "severity_score": 0,
+    "label": "Bình thường / Tối thiểu",
+    "recommendation": "Chúc mừng! Chỉ số của bạn đang ở mức an toàn. Hãy tiếp tục duy trì lối sống lành mạnh, ngủ đủ giấc và dành thời gian cho các sở thích cá nhân để giữ vững trạng thái tích cực này.",
+    "action_plan": [
+      "Duy trì tập thể dục 30 phút mỗi ngày.",
+      "Thực hành thiền biết ơn vào cuối ngày.",
+      "Kết nối thường xuyên với bạn bè và người thân."
+    ]
+  },
+  {
+    "severity_score": 1,
+    "label": "Nhẹ",
+    "recommendation": "Bạn đang có một vài dấu hiệu bất ổn tâm lý nhẹ. Đây có thể là phản ứng tạm thời với áp lực công việc hoặc cuộc sống. Đừng quá lo lắng, nhưng hãy bắt đầu chú ý chăm sóc bản thân nhiều hơn.",
+    "action_plan": [
+      "Sắp xếp lại thời gian biểu, giảm bớt khối lượng công việc.",
+      "Thực hành bài tập thở 4-7-8 khi cảm thấy căng thẳng.",
+      "Hạn chế sử dụng thiết bị điện tử 1 tiếng trước khi ngủ."
+    ]
+  },
+  {
+    "severity_score": 2,
+    "label": "Vừa / Trung bình",
+    "recommendation": "Chỉ số cho thấy sức khỏe tâm thần của bạn đang gặp khó khăn rõ rệt. Các triệu chứng bắt đầu ảnh hưởng đến chất lượng cuộc sống hàng ngày. Bạn nên tìm kiếm sự hỗ trợ để ngăn chặn tình trạng nặng hơn.",
+    "action_plan": [
+      "Chia sẻ tình trạng của mình với một người bạn tin tưởng.",
+      "Viết nhật ký cảm xúc để giải tỏa áp lực (Brain dump).",
+      "Cân nhắc đặt lịch tư vấn với chuyên viên tâm lý (Psychologist) để tham vấn liệu pháp hành vi."
+    ]
+  },
+  {
+    "severity_score": 3,
+    "label": "Nặng",
+    "recommendation": "Cảnh báo: Tình trạng của bạn đang ở mức báo động. Bạn có thể cảm thấy kiệt sức, mất kiểm soát hoặc bế tắc. Đừng cố gắng chịu đựng một mình, đây là lúc cần sự can thiệp từ chuyên gia y tế.",
+    "action_plan": [
+      "Liên hệ ngay với bác sĩ chuyên khoa Tâm thần để được thăm khám lâm sàng[cite: 1, 7].",
+      "Tuyệt đối không tự ý sử dụng các chất kích thích hoặc thuốc an thần không rõ nguồn gốc.",
+      "Ưu tiên các cơ sở bệnh viện có chuyên khoa Tâm thần chuyên sâu[cite: 73, 79]."
+    ]
+  },
+  {
+    "severity_score": 4,
+    "label": "Rất nặng / Nghiêm trọng",
+    "recommendation": "Đây là tình trạng khẩn cấp y khoa. Sức khỏe và an toàn của bạn đang bị đe dọa nghiêm trọng. Bạn cần được hỗ trợ y tế ngay lập tức để tránh những hệ lụy không mong muốn.",
+    "action_plan": [
+      "Đến ngay khoa cấp cứu hoặc các bệnh viện tâm thần gần nhất (như BV Bạch Mai hoặc BV Tâm thần TW)[cite: 71, 77].",
+      "Gọi hotline cứu trợ tâm lý hoặc nhờ người thân đưa đi khám ngay lập tức.",
+      "Tránh ở một mình trong thời gian này."
+    ]
+  }
+]

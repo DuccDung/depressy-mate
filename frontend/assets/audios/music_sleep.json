@@ -1,0 +1,68 @@
+{
+  "healing_sounds_playlist": {
+    "collection_name": "Âm thanh Chữa lành & Giấc ngủ",
+    "theme": "Lavender Night",
+    "tracks": [
+      {
+        "id": "track_01",
+        "title": "Mưa rơi mái hiên",
+        "description": "Tiếng mưa nhẹ tạo cảm giác an toàn, che lấp các tiếng ồn trắng xung quanh, giúp bạn dễ dàng đi vào giấc ngủ.",
+        "benefits": "Giảm căng thẳng, phù hợp với người khó ngủ do tiếng ồn.",
+        "duration": "15:00",
+        "audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "thumbnail": "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=500",
+        "hex_accent": "#A6B1E1"
+      },
+      {
+        "id": "track_02",
+        "title": "Sóng biển rì rào",
+        "description": "Nhịp điệu đều đặn của sóng biển giúp ổn định nhịp tim và đưa não bộ về trạng thái thư giãn sâu (Alpha waves).",
+        "benefits": "Giảm lo âu kịch phát, ổn định nhịp thở.",
+        "duration": "20:45",
+        "audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        "thumbnail": "https://images.unsplash.com/photo-1505118380757-91f5f45d8de4?w=500",
+        "hex_accent": "#DCD6F7"
+      },
+      {
+        "id": "track_03",
+        "title": "Gió mùa cao nguyên",
+        "description": "Tiếng gió thổi qua tán lá mang lại cảm giác tự do, khoáng đạt, giúp xua tan những suy nghĩ quẩn quanh.",
+        "benefits": "Giảm stress, làm sạch tâm trí sau một ngày làm việc.",
+        "duration": "12:30",
+        "audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+        "thumbnail": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=500",
+        "hex_accent": "#A8E6CF"
+      },
+      {
+        "id": "track_04",
+        "title": "Lửa trại đêm khuya",
+        "description": "Tiếng lách tách của củi cháy tạo không gian ấm cúng, giúp xoa dịu cảm giác cô đơn và trống rỗng.",
+        "benefits": "Tạo cảm giác ấm áp, an toàn cho người trầm cảm.",
+        "duration": "18:00",
+        "audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+        "thumbnail": "https://images.unsplash.com/photo-1503265192933-ce534359d7a5?w=500",
+        "hex_accent": "#FFAAA5"
+      },
+      {
+        "id": "track_05",
+        "title": "Rừng thông buổi sáng",
+        "description": "Tiếng chim hót líu lo kết hợp tiếng lá xào xạc mang lại năng lượng tích cực để bắt đầu ngày mới.",
+        "benefits": "Tăng cường endorphin, giảm triệu chứng u uất.",
+        "duration": "10:00",
+        "audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+        "thumbnail": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500",
+        "hex_accent": "#FFD3B6"
+      },
+      {
+        "id": "track_06",
+        "title": "Tần số chữa lành 432Hz",
+        "description": "Tần số âm nhạc được cho là có khả năng hòa hợp với nhịp sinh học tự nhiên của con người.",
+        "benefits": "Chữa lành tổn thương tâm lý sâu, hỗ trợ thiền định.",
+        "duration": "30:00",
+        "audio_url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+        "thumbnail": "https://images.unsplash.com/photo-1518005020480-309a9ba6121c?w=500",
+        "hex_accent": "#FF8B94"
+      }
+    ]
+  }
+}
