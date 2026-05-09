@@ -1,5 +1,11 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microsoft.EntityFrameworkCore;
+using server.Models;
 
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<DepressyMateContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DepressyMate")
+    ));
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
