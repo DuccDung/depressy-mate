@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
+import { getFacebookAccessToken } from '../services/facebookAuth';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -57,7 +58,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithFacebookAccessToken } = useAuth();
 
   const validateForm = () => {
     const nextErrors: LoginErrors = {};
@@ -98,6 +99,25 @@ export default function LoginScreen({ navigation }: Props) {
 
   const handleGoogleLogin = () => {
     navigation.navigate('GoogleLogin');
+  };
+
+  const handleFacebookLogin = async () => {
+    setLoading(true);
+    try {
+      const facebookAccessToken = await getFacebookAccessToken();
+      if (!facebookAccessToken) {
+        return;
+      }
+
+      await loginWithFacebookAccessToken(facebookAccessToken);
+    } catch (error: any) {
+      Alert.alert(
+        'Đăng nhập Facebook thất bại',
+        getApiErrorMessage(error, 'Không thể đăng nhập bằng Facebook. Vui lòng thử lại.')
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -203,6 +223,10 @@ export default function LoginScreen({ navigation }: Props) {
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin} disabled={loading}>
+                <Ionicons name="logo-facebook" size={20} color="#1877F2" />
+                <Text style={styles.socialButtonText}>Facebook</Text>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity

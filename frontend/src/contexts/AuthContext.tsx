@@ -19,6 +19,7 @@ interface AuthContextType {
   requestRegistrationOtp: (email: string, password: string, fullName: string) => Promise<void>;
   verifyRegistrationOtp: (email: string, otp: string) => Promise<void>;
   completeOAuthLogin: (newToken: string, userData: User) => Promise<void>;
+  loginWithFacebookAccessToken: (accessToken: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -79,6 +80,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await persistAuthSession(newToken, userData);
   };
 
+  const loginWithFacebookAccessToken = async (accessToken: string) => {
+    const response = await api.post('/auth/facebook', { accessToken });
+    const { token: newToken, user: userData } = response.data;
+
+    await persistAuthSession(newToken, userData);
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem('userToken');
     await AsyncStorage.removeItem('userData');
@@ -97,6 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         requestRegistrationOtp,
         verifyRegistrationOtp,
         completeOAuthLogin,
+        loginWithFacebookAccessToken,
         logout,
       }}
     >

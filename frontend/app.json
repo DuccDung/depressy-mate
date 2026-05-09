@@ -31,12 +31,10 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.ngocanh208.frontend",
-      "permissions": [
-        "android.permission.INTERNET"
-      ]
+      "permissions": ["android.permission.INTERNET"]
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -51,10 +49,19 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1017507293940200",
+          "clientToken": "9d295493a73c60cff022ad87d719e323",
+          "displayName": "depressy-mate-01",
+          "scheme": "fb1017507293940200"
+        }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
+      "typedRoutes": false,
       "reactCompiler": true
     },
     "extra": {
