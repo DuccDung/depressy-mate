@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace server.Controllers.Api;
 
@@ -23,6 +24,7 @@ public class UploadApiController : ControllerBase
     };
 
     private readonly IWebHostEnvironment _environment;
+    private readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
 
     public UploadApiController(IWebHostEnvironment environment)
     {
@@ -71,5 +73,39 @@ public class UploadApiController : ControllerBase
             path = relativeUrl,
             mediaType
         });
+    }
+
+    [HttpGet("media/{fileName}/stream")]
+    [AllowAnonymous]
+    public IActionResult StreamMedia(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || fileName != Path.GetFileName(fileName))
+        {
+            return BadRequest(new { error = "Ten file khong hop le." });
+        }
+
+        var extension = Path.GetExtension(fileName);
+        if (!AllowedExtensions.Contains(extension))
+        {
+            return BadRequest(new { error = "Dinh dang file khong duoc ho tro." });
+        }
+
+        var webRoot = _environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
+        var filePath = Path.Combine(webRoot, "uploads", "posts", fileName);
+        if (!System.IO.File.Exists(filePath))
+        {
+            return NotFound(new { error = "Khong tim thay file." });
+        }
+
+        if (!_contentTypeProvider.TryGetContentType(filePath, out var contentType))
+        {
+            contentType = extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+                ? "video/mp4"
+                : "application/octet-stream";
+        }
+
+        var stream = System.IO.File.OpenRead(filePath);
+        Response.Headers.AcceptRanges = "bytes";
+        return File(stream, contentType, enableRangeProcessing: true);
     }
 }

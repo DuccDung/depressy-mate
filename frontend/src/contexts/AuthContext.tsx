@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import socketService from '../services/socket';
@@ -8,7 +8,12 @@ export interface User {
   email: string;
   role: string;
   fullName: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  authProvider?: string | null;
+  isEmailVerified?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AuthContextType {
@@ -21,6 +26,8 @@ interface AuthContextType {
   verifyRegistrationOtp: (email: string, otp: string) => Promise<void>;
   completeOAuthLogin: (newToken: string, userData: User) => Promise<void>;
   loginWithFacebookAccessToken: (accessToken: string) => Promise<void>;
+  loginWithGoogleIdToken: (idToken: string) => Promise<void>;
+  updateUser: (userData: Partial<User>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -92,6 +99,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await persistAuthSession(newToken, userData);
   };
 
+  const loginWithGoogleIdToken = async (idToken: string) => {
+    const response = await api.post('/auth/google', { idToken });
+    const { token: newToken, user: userData } = response.data;
+
+    await persistAuthSession(newToken, userData);
+  };
+
+  const updateUser = useCallback(async (userData: Partial<User>) => {
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+      const nextUser = { ...currentUser, ...userData };
+      AsyncStorage.setItem('userData', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  }, []);
+
   const logout = async () => {
     await socketService.disconnect();
     await AsyncStorage.multiRemove(['userToken', 'userData']);
@@ -111,6 +134,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         verifyRegistrationOtp,
         completeOAuthLogin,
         loginWithFacebookAccessToken,
+        loginWithGoogleIdToken,
+        updateUser,
         logout,
       }}
     >

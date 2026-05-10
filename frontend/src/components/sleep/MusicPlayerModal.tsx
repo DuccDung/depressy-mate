@@ -28,14 +28,17 @@ interface Props {
   visible: boolean;
   track: SleepTrack | null;
   onClose: () => void;
+  onSessionEnd?: (payload: { track: SleepTrack; durationMs: number; listenedMs: number }) => void;
 }
 
-export default function MusicPlayerModal({ visible, track, onClose }: Props) {
+export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd }: Props) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const positionRef = React.useRef(0);
+  const durationRef = React.useRef(0);
 
   // Album art animation
   const albumScale = useSharedValue(0.85);
@@ -102,6 +105,8 @@ export default function MusicPlayerModal({ visible, track, onClose }: Props) {
 
   const onPlaybackStatusUpdate = (status: any) => {
     if (status.isLoaded) {
+      positionRef.current = status.positionMillis || 0;
+      durationRef.current = status.durationMillis || 0;
       setPosition(status.positionMillis || 0);
       setDuration(status.durationMillis || 0);
       setIsPlaying(status.isPlaying || false);
@@ -137,6 +142,14 @@ export default function MusicPlayerModal({ visible, track, onClose }: Props) {
 
   const handleClose = async () => {
     try {
+      if (track && positionRef.current >= 1000) {
+        onSessionEnd?.({
+          track,
+          durationMs: durationRef.current || track.durationMs,
+          listenedMs: positionRef.current,
+        });
+      }
+
       if (sound) {
         await sound.stopAsync();
         await sound.unloadAsync();
@@ -148,6 +161,8 @@ export default function MusicPlayerModal({ visible, track, onClose }: Props) {
     setIsPlaying(false);
     setPosition(0);
     setDuration(0);
+    positionRef.current = 0;
+    durationRef.current = 0;
     onClose();
   };
 

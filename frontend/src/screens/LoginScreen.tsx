@@ -18,11 +18,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 import { getFacebookAccessToken } from '../services/facebookAuth';
+import { getGoogleIdToken } from '../services/googleAuth';
 
 type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
-  GoogleLogin: undefined;
 };
 
 type Props = {
@@ -58,7 +58,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login, loginWithFacebookAccessToken } = useAuth();
+  const { login, loginWithFacebookAccessToken, loginWithGoogleIdToken } = useAuth();
 
   const validateForm = () => {
     const nextErrors: LoginErrors = {};
@@ -97,8 +97,23 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
-  const handleGoogleLogin = () => {
-    navigation.navigate('GoogleLogin');
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const googleIdToken = await getGoogleIdToken();
+      if (!googleIdToken) {
+        return;
+      }
+
+      await loginWithGoogleIdToken(googleIdToken);
+    } catch (error: any) {
+      Alert.alert(
+        'Dang nhap Google that bai',
+        getApiErrorMessage(error, 'Khong the dang nhap bang Google. Vui long thu lai.')
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFacebookLogin = async () => {

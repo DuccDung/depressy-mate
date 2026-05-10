@@ -29,6 +29,8 @@ public partial class User
 
     public virtual ICollection<AssessmentResult> AssessmentResults { get; set; } = new List<AssessmentResult>();
 
+    public virtual ICollection<BreathingSession> BreathingSessions { get; set; } = new List<BreathingSession>();
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
@@ -46,6 +48,8 @@ public partial class User
     public virtual ICollection<PostSave> PostSaves { get; set; } = new List<PostSave>();
 
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+
+    public virtual ICollection<SleepSession> SleepSessions { get; set; } = new List<SleepSession>();
 
     public virtual Profile? Profile { get; set; }
 }

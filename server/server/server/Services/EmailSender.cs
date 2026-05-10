@@ -67,6 +67,25 @@ public sealed class EmailSender
         return SendAsync(toAddress, subject, body, cancellationToken);
     }
 
+    public Task SendEmailVerificationOtpAsync(string toAddress, string otp, CancellationToken cancellationToken = default)
+    {
+        var subject = "Ma OTP xac thuc email Depressy Mate";
+        var encodedOtp = WebUtility.HtmlEncode(otp);
+        var body = $"""
+            <!doctype html>
+            <html>
+            <body style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.5">
+                <h2 style="color:#7B61FF">Depressy Mate</h2>
+                <p>Ban dang xac thuc email cho tai khoan Depressy Mate. Vui long nhap ma OTP ben duoi:</p>
+                <p style="font-size:28px;font-weight:700;letter-spacing:6px;color:#111827">{encodedOtp}</p>
+                <p>Ma nay co hieu luc trong 10 phut. Neu ban khong yeu cau, hay bo qua email nay.</p>
+            </body>
+            </html>
+            """;
+
+        return SendAsync(toAddress, subject, body, cancellationToken);
+    }
+
     private async Task SendAsync(string toAddress, string subject, string htmlBody, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_smtpOptions.Host) ||

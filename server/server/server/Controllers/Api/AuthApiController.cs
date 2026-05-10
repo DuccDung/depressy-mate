@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -197,6 +199,134 @@ public class AuthApiController : ControllerBase
         });
     }
 
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [HttpPost("email-verification/request-otp")]
+    public async Task<IActionResult> RequestEmailVerificationOtp(RequestEmailVerificationOtpRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest(new { error = "Email la bat buoc." });
+        }
+
+        var currentUserId = ChatService.GetUserId(User);
+        var user = await _context.Users.FirstOrDefaultAsync(item => item.Id == currentUserId, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized(new { error = "Phien dang nhap khong hop le." });
+        }
+
+        var normalizedProvider = user.AuthProvider?.Trim().ToLowerInvariant();
+        if (normalizedProvider != "facebook")
+        {
+            return BadRequest(new { error = "Chuc nang nay chi danh cho tai khoan dang nhap bang Facebook." });
+        }
+
+        if (user.IsEmailVerified)
+        {
+            return BadRequest(new { error = "Email cua tai khoan da duoc xac thuc." });
+        }
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        var emailExists = await _context.Users.AnyAsync(item => item.Email == email && item.Id != currentUserId, cancellationToken);
+        if (emailExists)
+        {
+            return Conflict(new { error = "Email nay da duoc su dung boi tai khoan khac." });
+        }
+
+        var otp = GenerateOtp();
+        var expiresAt = DateTimeOffset.UtcNow.Add(RegistrationOtpLifetime);
+        var pendingVerification = new PendingEmailVerification
+        {
+            UserId = currentUserId,
+            Email = email,
+            OtpHash = BCrypt.Net.BCrypt.HashPassword(otp),
+            ExpiresAt = expiresAt
+        };
+
+        var cacheKey = GetEmailVerificationOtpCacheKey(currentUserId);
+        _cache.Set(cacheKey, pendingVerification, expiresAt);
+
+        try
+        {
+            await _emailSender.SendEmailVerificationOtpAsync(email, otp, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _cache.Remove(cacheKey);
+            _logger.LogError(exception, "Could not send email verification OTP to {Email}.", email);
+            return StatusCode(500, new { error = "Khong the gui ma OTP qua email. Vui long thu lai sau." });
+        }
+
+        return Ok(new
+        {
+            message = "Ma OTP da duoc gui toi email cua ban.",
+            expiresInSeconds = (int)RegistrationOtpLifetime.TotalSeconds
+        });
+    }
+
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [HttpPost("email-verification/verify-otp")]
+    public async Task<IActionResult> VerifyEmailVerificationOtp(VerifyEmailVerificationOtpRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Otp))
+        {
+            return BadRequest(new { error = "Email va ma OTP la bat buoc." });
+        }
+
+        var currentUserId = ChatService.GetUserId(User);
+        var cacheKey = GetEmailVerificationOtpCacheKey(currentUserId);
+        if (!_cache.TryGetValue(cacheKey, out PendingEmailVerification? pendingVerification) ||
+            pendingVerification is null ||
+            pendingVerification.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            _cache.Remove(cacheKey);
+            return BadRequest(new { error = "Ma OTP da het han. Vui long gui lai ma moi." });
+        }
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (pendingVerification.UserId != currentUserId || pendingVerification.Email != email)
+        {
+            return BadRequest(new { error = "Email xac thuc khong khop voi yeu cau OTP." });
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(request.Otp.Trim(), pendingVerification.OtpHash))
+        {
+            pendingVerification.Attempts++;
+            if (pendingVerification.Attempts >= MaxRegistrationOtpAttempts)
+            {
+                _cache.Remove(cacheKey);
+                return BadRequest(new { error = "Ban da nhap sai OTP qua nhieu lan. Vui long gui lai ma moi." });
+            }
+
+            _cache.Set(cacheKey, pendingVerification, pendingVerification.ExpiresAt);
+            return BadRequest(new { error = "Ma OTP khong dung." });
+        }
+
+        var user = await _context.Users
+            .Include(item => item.Profile)
+            .FirstOrDefaultAsync(item => item.Id == currentUserId, cancellationToken);
+        if (user is null)
+        {
+            _cache.Remove(cacheKey);
+            return Unauthorized(new { error = "Phien dang nhap khong hop le." });
+        }
+
+        var emailExists = await _context.Users.AnyAsync(item => item.Email == email && item.Id != currentUserId, cancellationToken);
+        if (emailExists)
+        {
+            _cache.Remove(cacheKey);
+            return Conflict(new { error = "Email nay da duoc su dung boi tai khoan khac." });
+        }
+
+        user.Email = email;
+        user.IsEmailVerified = true;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+        _cache.Remove(cacheKey);
+
+        return Ok(ToAuthUser(user));
+    }
+
     private static object ToAuthUser(User user)
     {
         return new
@@ -205,7 +335,12 @@ public class AuthApiController : ControllerBase
             email = user.Email,
             role = user.Role,
             fullName = user.Profile?.FullName ?? user.FullName,
-            avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl
+            avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl,
+            bio = user.Profile?.Bio,
+            authProvider = string.IsNullOrWhiteSpace(user.AuthProvider) ? "local" : user.AuthProvider,
+            isEmailVerified = user.IsEmailVerified,
+            createdAt = user.CreatedAt,
+            updatedAt = user.UpdatedAt
         };
     }
 
@@ -217,6 +352,11 @@ public class AuthApiController : ControllerBase
     private static string GetRegistrationOtpCacheKey(string email)
     {
         return $"registration_otp:{email}";
+    }
+
+    private static string GetEmailVerificationOtpCacheKey(Guid userId)
+    {
+        return $"email_verification_otp:{userId}";
     }
 
     private sealed class PendingRegistration
@@ -233,6 +373,19 @@ public class AuthApiController : ControllerBase
 
         public int Attempts { get; set; }
     }
+
+    private sealed class PendingEmailVerification
+    {
+        public Guid UserId { get; init; }
+
+        public string Email { get; init; } = string.Empty;
+
+        public string OtpHash { get; init; } = string.Empty;
+
+        public DateTimeOffset ExpiresAt { get; init; }
+
+        public int Attempts { get; set; }
+    }
 }
 
 public record RegisterRequest(string Email, string Password, string FullName);
@@ -240,3 +393,7 @@ public record RegisterRequest(string Email, string Password, string FullName);
 public record VerifyRegisterOtpRequest(string Email, string Otp);
 
 public record LoginRequest(string Email, string Password);
+
+public record RequestEmailVerificationOtpRequest(string Email);
+
+public record VerifyEmailVerificationOtpRequest(string Email, string Otp);

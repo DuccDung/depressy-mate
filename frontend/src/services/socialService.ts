@@ -40,13 +40,34 @@ export interface PagedResult<T> {
 const userCache: Record<string, { full_name: string; avatar_url: string | null }> = {};
 
 export const socialService = {
-  getPosts: async (limit: number = 10, cursor?: string, savedOnly = false): Promise<PagedResult<Post>> => {
+  getPosts: async (
+    limit: number = 10,
+    cursor?: string,
+    savedOnly = false,
+    userId?: string,
+    mediaType?: 'IMAGE' | 'VIDEO',
+  ): Promise<PagedResult<Post>> => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor) params.append('cursor', cursor);
     if (savedOnly) params.append('savedOnly', 'true');
+    if (userId) params.append('userId', userId);
+    if (mediaType) params.append('mediaType', mediaType);
 
     const res = await api.get(`/posts?${params.toString()}`);
     return res.data;
+  },
+
+  getPost: async (postId: string): Promise<Post> => {
+    const res = await api.get(`/posts/${postId}`);
+    return res.data;
+  },
+
+  getUserPosts: async (userId: string, limit: number = 10, cursor?: string): Promise<PagedResult<Post>> => {
+    return socialService.getPosts(limit, cursor, false, userId);
+  },
+
+  getVideoPosts: async (limit: number = 10, cursor?: string): Promise<PagedResult<Post>> => {
+    return socialService.getPosts(limit, cursor, false, undefined, 'VIDEO');
   },
 
   getSavedPosts: async (limit: number = 10, cursor?: string): Promise<PagedResult<Post>> => {

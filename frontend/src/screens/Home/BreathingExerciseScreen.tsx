@@ -12,6 +12,7 @@ import { Colors, Spacing, BorderRadius, Shadows, Typography } from '../../../con
 import BreatheCircle from '../../components/breathe/BreatheCircle';
 import HowItWorksCard from '../../components/breathe/HowItWorksCard';
 import SessionCompleteModal from '../../components/breathe/SessionCompleteModal';
+import { healthService } from '../../services/healthService';
 
 
 // Breathing pattern: Inhale 4s, Hold 4s, Exhale 6s = 14s total per cycle
@@ -39,6 +40,8 @@ export default function BreathingExerciseScreen({ onClose }: Props) {
   const phaseRef = React.useRef<BreathePhase>('idle');
   const countdownRef = React.useRef(BREATHE_CONFIG.inhale);
   const cycleRef = React.useRef(0);
+  const sessionStartedAtRef = React.useRef<number | null>(null);
+  const loggedSessionRef = React.useRef(false);
 
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
@@ -56,7 +59,36 @@ export default function BreathingExerciseScreen({ onClose }: Props) {
     phaseRef.current = 'idle';
     countdownRef.current = BREATHE_CONFIG.inhale;
     cycleRef.current = 0;
+    sessionStartedAtRef.current = null;
+    loggedSessionRef.current = false;
   }, [stopTimer]);
+
+  const logBreathingSession = useCallback(async (completed: boolean) => {
+    if (loggedSessionRef.current) return;
+
+    const startedAt = sessionStartedAtRef.current;
+    const durationSeconds = completed
+      ? (BREATHE_CONFIG.inhale + BREATHE_CONFIG.hold + BREATHE_CONFIG.exhale) * BREATHE_CONFIG.totalCycles
+      : startedAt
+        ? Math.max(1, Math.floor((Date.now() - startedAt) / 1000))
+        : 0;
+    const cyclesCompleted = completed ? BREATHE_CONFIG.totalCycles : cycleRef.current;
+
+    if (durationSeconds <= 0 && cyclesCompleted <= 0) return;
+
+    loggedSessionRef.current = true;
+    try {
+      await healthService.createBreathingSession({
+        duration_seconds: durationSeconds,
+        cycles_completed: cyclesCompleted,
+        total_cycles: BREATHE_CONFIG.totalCycles,
+        completed,
+      });
+    } catch (error) {
+      loggedSessionRef.current = false;
+      console.warn('Could not save breathing session:', error);
+    }
+  }, []);
 
   const tick = useCallback(() => {
     countdownRef.current -= 1;
@@ -81,6 +113,7 @@ export default function BreathingExerciseScreen({ onClose }: Props) {
           setIsRunning(false);
           setPhase('idle');
           phaseRef.current = 'idle';
+          logBreathingSession(true);
           setShowComplete(true);
           return;
         }
@@ -92,10 +125,12 @@ export default function BreathingExerciseScreen({ onClose }: Props) {
     }
 
     setCountdown(countdownRef.current);
-  }, [stopTimer]);
+  }, [logBreathingSession, stopTimer]);
 
   const startExercise = useCallback(() => {
     resetExercise();
+    loggedSessionRef.current = false;
+    sessionStartedAtRef.current = Date.now();
     setIsRunning(true);
     phaseRef.current = 'inhale';
     countdownRef.current = BREATHE_CONFIG.inhale;
@@ -123,6 +158,14 @@ export default function BreathingExerciseScreen({ onClose }: Props) {
     } else {
       resumeExercise();
     }
+  };
+
+  const handleClose = () => {
+    if (phase !== 'idle') {
+      logBreathingSession(false);
+    }
+    resetExercise();
+    onClose();
   };
 
   const getPhaseLabel = (): string => {
@@ -168,7 +211,7 @@ export default function BreathingExerciseScreen({ onClose }: Props) {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => { resetExercise(); onClose(); }}
+          onPress={handleClose}
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color={Colors.light.onSurface} />

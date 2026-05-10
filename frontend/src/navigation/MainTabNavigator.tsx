@@ -15,7 +15,10 @@ export type MainTabParamList = {
   Contact: undefined;
   Messenger: undefined;
   Chatbot: undefined;
-  Explore: undefined;
+  Explore: {
+    initialTab?: 'learn' | 'community' | 'saved';
+    focusPostId?: string;
+  } | undefined;
   Profile: undefined;
 };
 

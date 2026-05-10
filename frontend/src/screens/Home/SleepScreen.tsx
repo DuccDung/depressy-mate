@@ -14,6 +14,7 @@ import SoundTrackItem from '../../components/sleep/SoundTrackItem';
 import SleepTipCard from '../../components/sleep/SleepTipCard';
 import MusicPlayerModal from '../../components/sleep/MusicPlayerModal';
 import { SLEEP_TRACKS, SleepTrack } from '../../components/sleep/sleepData';
+import { healthService } from '../../services/healthService';
 
 interface Props {
   onClose: () => void;
@@ -31,6 +32,20 @@ export default function SleepScreen({ onClose }: Props) {
   const handleClosePlayer = () => {
     setShowPlayer(false);
     setSelectedTrack(null);
+  };
+
+  const handleSleepSessionEnd = async ({ track, durationMs, listenedMs }: { track: SleepTrack; durationMs: number; listenedMs: number }) => {
+    try {
+      await healthService.createSleepSession({
+        track_id: track.id,
+        track_title: track.title,
+        duration_ms: durationMs,
+        listened_ms: listenedMs,
+        completed: durationMs > 0 && listenedMs >= durationMs * 0.9,
+      });
+    } catch (error) {
+      console.warn('Could not save sleep session:', error);
+    }
   };
 
   return (
@@ -90,6 +105,7 @@ export default function SleepScreen({ onClose }: Props) {
         visible={showPlayer}
         track={selectedTrack}
         onClose={handleClosePlayer}
+        onSessionEnd={handleSleepSessionEnd}
       />
     </SafeAreaView>
   );

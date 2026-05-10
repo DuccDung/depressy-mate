@@ -17,6 +17,8 @@ public partial class DepressyMateContext : DbContext
 
     public virtual DbSet<AssessmentResult> AssessmentResults { get; set; }
 
+    public virtual DbSet<BreathingSession> BreathingSessions { get; set; }
+
     public virtual DbSet<Clinic> Clinics { get; set; }
 
     public virtual DbSet<Comment> Comments { get; set; }
@@ -42,6 +44,8 @@ public partial class DepressyMateContext : DbContext
     public virtual DbSet<PostSave> PostSaves { get; set; }
 
     public virtual DbSet<Profile> Profiles { get; set; }
+
+    public virtual DbSet<SleepSession> SleepSessions { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
@@ -73,6 +77,30 @@ public partial class DepressyMateContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.AssessmentResults)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_assessment_results_users");
+        });
+
+        modelBuilder.Entity<BreathingSession>(entity =>
+        {
+            entity.ToTable("breathing_sessions");
+
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt }, "IX_breathing_sessions_user_created").IsDescending(false, true);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.Completed).HasColumnName("completed");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.CyclesCompleted).HasColumnName("cycles_completed");
+            entity.Property(e => e.DurationSeconds).HasColumnName("duration_seconds");
+            entity.Property(e => e.TotalCycles).HasColumnName("total_cycles");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.User).WithMany(p => p.BreathingSessions)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_breathing_sessions_users");
         });
 
         modelBuilder.Entity<Clinic>(entity =>
@@ -481,6 +509,35 @@ public partial class DepressyMateContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_post_saves_users");
+        });
+
+        modelBuilder.Entity<SleepSession>(entity =>
+        {
+            entity.ToTable("sleep_sessions");
+
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt }, "IX_sleep_sessions_user_created").IsDescending(false, true);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.Completed).HasColumnName("completed");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.DurationMs).HasColumnName("duration_ms");
+            entity.Property(e => e.ListenedMs).HasColumnName("listened_ms");
+            entity.Property(e => e.TrackId)
+                .HasMaxLength(100)
+                .HasColumnName("track_id");
+            entity.Property(e => e.TrackTitle)
+                .HasMaxLength(255)
+                .HasColumnName("track_title");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SleepSessions)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_sleep_sessions_users");
         });
 
         modelBuilder.Entity<Profile>(entity =>

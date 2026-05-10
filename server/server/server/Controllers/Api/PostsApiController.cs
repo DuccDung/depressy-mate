@@ -28,11 +28,14 @@ public class PostsApiController : ControllerBase
         [FromQuery] int limit = 10,
         [FromQuery] string? cursor = null,
         [FromQuery] bool savedOnly = false,
+        [FromQuery] Guid? userId = null,
+        [FromQuery] string? mediaType = null,
         CancellationToken cancellationToken = default)
     {
         var currentUserId = ChatService.GetUserId(User);
         var safeLimit = Math.Clamp(limit, 5, 30);
         var cursorDate = ParseCursor(cursor);
+        var normalizedMediaType = NormalizeMediaTypeFilter(mediaType);
 
         var query = _context.Posts
             .AsNoTracking()
@@ -43,6 +46,16 @@ public class PostsApiController : ControllerBase
         if (savedOnly)
         {
             query = query.Where(post => post.PostSaves.Any(save => save.UserId == currentUserId));
+        }
+
+        if (userId.HasValue)
+        {
+            query = query.Where(post => post.UserId == userId.Value);
+        }
+
+        if (normalizedMediaType is not null)
+        {
+            query = query.Where(post => post.MediaType == normalizedMediaType);
         }
 
         if (cursorDate.HasValue)
@@ -89,7 +102,32 @@ public class PostsApiController : ControllerBase
     [HttpGet("saved")]
     public Task<IActionResult> GetSavedPosts([FromQuery] int limit = 10, [FromQuery] string? cursor = null, CancellationToken cancellationToken = default)
     {
-        return GetPosts(limit, cursor, true, cancellationToken);
+        return GetPosts(limit, cursor, true, null, null, cancellationToken);
+    }
+
+    [HttpGet("{postId:guid}")]
+    public async Task<IActionResult> GetPost(Guid postId, CancellationToken cancellationToken)
+    {
+        var currentUserId = ChatService.GetUserId(User);
+        var post = await _context.Posts
+            .AsNoTracking()
+            .Include(item => item.User)
+            .ThenInclude(user => user.Profile)
+            .FirstOrDefaultAsync(item => item.Id == postId && item.DeletedAt == null, cancellationToken);
+
+        if (post is null)
+        {
+            return NotFound(new { error = "Khong tim thay bai viet." });
+        }
+
+        var isLiked = await _context.PostLikes
+            .AsNoTracking()
+            .AnyAsync(item => item.PostId == postId && item.UserId == currentUserId, cancellationToken);
+        var isSaved = await _context.PostSaves
+            .AsNoTracking()
+            .AnyAsync(item => item.PostId == postId && item.UserId == currentUserId, cancellationToken);
+
+        return Ok(MapPostDto(post, isLiked, isSaved));
     }
 
     [HttpPost]
@@ -454,6 +492,12 @@ public class PostsApiController : ControllerBase
 
         var normalizedType = mediaType?.Trim().ToUpperInvariant();
         return normalizedType is "VIDEO" ? "VIDEO" : "IMAGE";
+    }
+
+    private static string? NormalizeMediaTypeFilter(string? mediaType)
+    {
+        var normalizedType = mediaType?.Trim().ToUpperInvariant();
+        return normalizedType is "IMAGE" or "VIDEO" ? normalizedType : null;
     }
 
     private static string? Clean(string? value)

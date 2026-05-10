@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -15,16 +16,30 @@ namespace server.Controllers.Api;
 public class GoogleAuthApiController : ControllerBase
 {
     private const string DefaultAppReturnUrl = "frontend://auth/google";
+    private static readonly HashSet<string> ValidGoogleIssuers = new(StringComparer.Ordinal)
+    {
+        "accounts.google.com",
+        "https://accounts.google.com"
+    };
 
     private readonly DepressyMateContext _context;
     private readonly JwtTokenService _jwtTokenService;
+    private readonly HttpClient _httpClient;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<GoogleAuthApiController> _logger;
 
     public GoogleAuthApiController(
         DepressyMateContext context,
-        JwtTokenService jwtTokenService)
+        JwtTokenService jwtTokenService,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<GoogleAuthApiController> logger)
     {
         _context = context;
         _jwtTokenService = jwtTokenService;
+        _httpClient = httpClientFactory.CreateClient();
+        _configuration = configuration;
+        _logger = logger;
     }
 
     [HttpGet("google")]
@@ -40,6 +55,57 @@ public class GoogleAuthApiController : ControllerBase
         };
 
         return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleTokenLogin(
+        GoogleTokenLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.IdToken))
+        {
+            return BadRequest(new { error = "Google idToken is required." });
+        }
+
+        GoogleTokenInfo profile;
+        try
+        {
+            profile = await ValidateGoogleIdTokenAsync(request.IdToken.Trim(), cancellationToken);
+        }
+        catch (GoogleTokenException exception)
+        {
+            return Unauthorized(new { error = exception.Message });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Could not validate Google id token.");
+            return StatusCode(502, new { error = "Khong the xac thuc Google idToken. Vui long thu lai." });
+        }
+
+        var email = profile.Email!.Trim().ToLowerInvariant();
+        var user = await _context.Users
+            .Include(item => item.Profile)
+            .FirstOrDefaultAsync(item => item.Email == email, cancellationToken);
+
+        if (user is null)
+        {
+            user = CreateGoogleUser(email, profile.Name, profile.Picture);
+            _context.Users.Add(user);
+        }
+        else
+        {
+            UpdateGoogleUser(user, profile.Name, profile.Picture);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var token = _jwtTokenService.Generate(user);
+        return Ok(new
+        {
+            message = "Google login successful.",
+            token,
+            user = ToAuthUser(user)
+        });
     }
 
     [HttpGet("google/callback")]
@@ -82,6 +148,103 @@ public class GoogleAuthApiController : ControllerBase
 
         var token = _jwtTokenService.Generate(user);
         return RedirectWithAuthResult(safeReturnUrl, token, ToAuthUser(user));
+    }
+
+    private async Task<GoogleTokenInfo> ValidateGoogleIdTokenAsync(
+        string idToken,
+        CancellationToken cancellationToken)
+    {
+        var allowedAudiences = GetAllowedGoogleAudiences();
+        if (allowedAudiences.Count == 0)
+        {
+            throw new InvalidOperationException("Google client ID is not configured.");
+        }
+
+        using var response = await _httpClient.GetAsync(
+            $"https://oauth2.googleapis.com/tokeninfo?id_token={Uri.EscapeDataString(idToken)}",
+            cancellationToken);
+
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Google tokeninfo validation failed with status {StatusCode}.", response.StatusCode);
+            throw new GoogleTokenException("Google idToken khong hop le hoac da het han.");
+        }
+
+        var profile = JsonSerializer.Deserialize<GoogleTokenInfo>(json);
+        if (profile is null)
+        {
+            throw new GoogleTokenException("Google khong tra ve thong tin nguoi dung hop le.");
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Issuer) || !ValidGoogleIssuers.Contains(profile.Issuer))
+        {
+            throw new GoogleTokenException("Google idToken khong co issuer hop le.");
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Audience) || !allowedAudiences.Contains(profile.Audience))
+        {
+            throw new GoogleTokenException("Google idToken khong thuoc ung dung nay.");
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Subject))
+        {
+            throw new GoogleTokenException("Google khong tra ve ma nguoi dung hop le.");
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Email))
+        {
+            throw new GoogleTokenException("Google khong tra ve email hop le.");
+        }
+
+        if (!profile.IsEmailVerified)
+        {
+            throw new GoogleTokenException("Email Google chua duoc xac thuc.");
+        }
+
+        return profile;
+    }
+
+    private HashSet<string> GetAllowedGoogleAudiences()
+    {
+        var values = new List<string?>
+        {
+            _configuration["Authentication:Google:client_id"],
+            _configuration["Authentication:Google:ClientId"],
+            _configuration["Authentication:Google:WebClientId"],
+            _configuration["Google:ClientId"],
+            _configuration["Google:WebClientId"]
+        };
+
+        AddSplitValues(values, _configuration["Authentication:Google:AllowedClientIds"]);
+        AddSplitValues(values, _configuration["Authentication:Google:client_ids"]);
+        AddSectionValues(values, _configuration.GetSection("Authentication:Google:AllowedClientIds"));
+        AddSectionValues(values, _configuration.GetSection("Authentication:Google:client_ids"));
+
+        return values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static void AddSplitValues(List<string?> values, string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return;
+        }
+
+        values.AddRange(rawValue.Split(
+            new[] { ',', ';', ' ' },
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    private static void AddSectionValues(List<string?> values, IConfigurationSection section)
+    {
+        foreach (var child in section.GetChildren())
+        {
+            values.Add(child.Value);
+        }
     }
 
     private static User CreateGoogleUser(string email, string? fullName, string? avatarUrl)
@@ -153,7 +316,12 @@ public class GoogleAuthApiController : ControllerBase
             email = user.Email,
             role = user.Role,
             fullName = user.Profile?.FullName ?? user.FullName,
-            avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl
+            avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl,
+            bio = user.Profile?.Bio,
+            authProvider = string.IsNullOrWhiteSpace(user.AuthProvider) ? "google" : user.AuthProvider,
+            isEmailVerified = user.IsEmailVerified,
+            createdAt = user.CreatedAt,
+            updatedAt = user.UpdatedAt
         };
     }
 
@@ -199,4 +367,48 @@ public class GoogleAuthApiController : ControllerBase
 
         return $"{url}{separator}{query}";
     }
+
+    private sealed class GoogleTokenException : Exception
+    {
+        public GoogleTokenException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    private sealed class GoogleTokenInfo
+    {
+        [JsonPropertyName("iss")]
+        public string? Issuer { get; set; }
+
+        [JsonPropertyName("aud")]
+        public string? Audience { get; set; }
+
+        [JsonPropertyName("sub")]
+        public string? Subject { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("email_verified")]
+        public JsonElement EmailVerified { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("picture")]
+        public string? Picture { get; set; }
+
+        public bool IsEmailVerified => EmailVerified.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.String => string.Equals(
+                EmailVerified.GetString(),
+                "true",
+                StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+    }
 }
+
+public record GoogleTokenLoginRequest(string IdToken);

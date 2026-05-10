@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ResizeMode, Video } from 'expo-av';
 import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
 import { Post } from '../../services/socialService';
 import { API_ORIGIN } from '../../services/api';
@@ -11,6 +12,8 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onSave: (postId: string) => void;
+  autoPlay?: boolean;
+  highlighted?: boolean;
 }
 
 const resolveUrl = (url?: string | null) => {
@@ -19,11 +22,32 @@ const resolveUrl = (url?: string | null) => {
   return `${API_ORIGIN}${url}`;
 };
 
+const resolveStreamUrl = (url?: string | null) => {
+  const resolvedUrl = resolveUrl(url);
+  if (!resolvedUrl) return null;
+
+  const marker = '/uploads/posts/';
+  const markerIndex = resolvedUrl.indexOf(marker);
+  if (markerIndex < 0) return resolvedUrl;
+
+  const fileName = resolvedUrl.slice(markerIndex + marker.length).split(/[?#]/)[0];
+  if (!fileName) return resolvedUrl;
+
+  return `${API_ORIGIN}/api/upload/media/${encodeURIComponent(fileName)}/stream`;
+};
+
+const parseServerDate = (dateString: string) => {
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(dateString);
+  return new Date(hasTimezone ? dateString : `${dateString}Z`);
+};
+
 const formatDate = (dateString: string) => {
-  const d = new Date(dateString);
+  const d = parseServerDate(dateString);
+  if (Number.isNaN(d.getTime())) return '';
+
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.max(0, Math.round(diffMs / 60000));
+  const diffMins = Math.max(0, Math.floor(diffMs / 60000));
 
   if (diffMins < 1) return 'Vừa xong';
   if (diffMins < 60) return `${diffMins} phút trước`;
@@ -31,11 +55,12 @@ const formatDate = (dateString: string) => {
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 };
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onSave }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onSave, autoPlay = false, highlighted = false }) => {
   const mediaUrl = resolveUrl(post.media_url);
+  const streamUrl = post.media_type === 'VIDEO' ? resolveStreamUrl(post.media_url) : mediaUrl;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, highlighted && styles.highlightedCard]}>
       <View style={styles.header}>
         <UserAvatar
           userId={post.user_id}
@@ -59,18 +84,20 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onS
       {!!post.content && <Text style={styles.content}>{post.content}</Text>}
 
       {!!mediaUrl && (
-        <TouchableOpacity activeOpacity={0.92} style={styles.mediaContainer}>
-          {post.media_type === 'VIDEO' ? (
-            <View style={styles.videoBox}>
-              <Image source={{ uri: mediaUrl }} style={styles.media} resizeMode="cover" />
-              <View style={styles.playButton}>
-                <Ionicons name="play" size={30} color="#FFF" />
-              </View>
-            </View>
+        <View style={styles.mediaContainer}>
+          {post.media_type === 'VIDEO' && streamUrl ? (
+            <Video
+              source={{ uri: streamUrl }}
+              style={styles.media}
+              resizeMode={ResizeMode.COVER}
+              useNativeControls
+              shouldPlay={autoPlay}
+              isLooping={false}
+            />
           ) : (
             <Image source={{ uri: mediaUrl }} style={styles.media} resizeMode="cover" />
           )}
-        </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.statsRow}>
@@ -111,6 +138,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 24,
     elevation: 2,
+  },
+  highlightedCard: {
+    borderColor: '#1D6B63',
+    borderWidth: 1.5,
+    shadowColor: '#1D6B63',
+    shadowOpacity: 0.16,
+    elevation: 5,
   },
   header: {
     flexDirection: 'row',
@@ -162,21 +196,6 @@ const styles = StyleSheet.create({
   media: {
     width: '100%',
     height: '100%',
-  },
-  videoBox: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  playButton: {
-    position: 'absolute',
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   statsRow: {
     flexDirection: 'row',

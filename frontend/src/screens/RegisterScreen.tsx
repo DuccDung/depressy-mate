@@ -18,11 +18,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 import { getFacebookAccessToken } from '../services/facebookAuth';
+import { getGoogleIdToken } from '../services/googleAuth';
 
 type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
-  GoogleLogin: undefined;
 };
 
 type Props = {
@@ -66,7 +66,12 @@ export default function RegisterScreen({ navigation }: Props) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<RegisterErrors>({});
   const [loading, setLoading] = useState(false);
-  const { requestRegistrationOtp, verifyRegistrationOtp, loginWithFacebookAccessToken } = useAuth();
+  const {
+    requestRegistrationOtp,
+    verifyRegistrationOtp,
+    loginWithFacebookAccessToken,
+    loginWithGoogleIdToken,
+  } = useAuth();
 
   const clearFieldError = (field: keyof RegisterErrors) => {
     if (errors[field]) {
@@ -169,8 +174,23 @@ export default function RegisterScreen({ navigation }: Props) {
     setErrors({});
   };
 
-  const handleGoogleRegister = () => {
-    navigation.navigate('GoogleLogin');
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    try {
+      const googleIdToken = await getGoogleIdToken();
+      if (!googleIdToken) {
+        return;
+      }
+
+      await loginWithGoogleIdToken(googleIdToken);
+    } catch (error: any) {
+      Alert.alert(
+        'Dang nhap Google that bai',
+        getApiErrorMessage(error, 'Khong the dang nhap bang Google. Vui long thu lai.')
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFacebookRegister = async () => {

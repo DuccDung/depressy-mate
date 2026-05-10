@@ -10,6 +10,8 @@ IF OBJECT_ID('dbo.comments', 'U') IS NOT NULL DROP TABLE dbo.comments;
 IF OBJECT_ID('dbo.post_likes', 'U') IS NOT NULL DROP TABLE dbo.post_likes;
 IF OBJECT_ID('dbo.posts', 'U') IS NOT NULL DROP TABLE dbo.posts;
 IF OBJECT_ID('dbo.journals', 'U') IS NOT NULL DROP TABLE dbo.journals;
+IF OBJECT_ID('dbo.sleep_sessions', 'U') IS NOT NULL DROP TABLE dbo.sleep_sessions;
+IF OBJECT_ID('dbo.breathing_sessions', 'U') IS NOT NULL DROP TABLE dbo.breathing_sessions;
 IF OBJECT_ID('dbo.mood_checkins', 'U') IS NOT NULL DROP TABLE dbo.mood_checkins;
 IF OBJECT_ID('dbo.assessment_results', 'U') IS NOT NULL DROP TABLE dbo.assessment_results;
 IF OBJECT_ID('dbo.profiles', 'U') IS NOT NULL DROP TABLE dbo.profiles;
@@ -81,6 +83,34 @@ CREATE TABLE dbo.journals (
     updated_at DATETIME2(3) NOT NULL CONSTRAINT DF_journals_updated_at DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_journals_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
     CONSTRAINT CK_journals_content_or_audio CHECK (content IS NOT NULL OR audio_url IS NOT NULL)
+);
+GO
+
+CREATE TABLE dbo.breathing_sessions (
+    id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_breathing_sessions PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    duration_seconds INT NOT NULL CONSTRAINT DF_breathing_sessions_duration DEFAULT 0,
+    cycles_completed INT NOT NULL CONSTRAINT DF_breathing_sessions_cycles DEFAULT 0,
+    total_cycles INT NOT NULL CONSTRAINT DF_breathing_sessions_total_cycles DEFAULT 0,
+    completed BIT NOT NULL CONSTRAINT DF_breathing_sessions_completed DEFAULT 0,
+    created_at DATETIME2(3) NOT NULL CONSTRAINT DF_breathing_sessions_created_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_breathing_sessions_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
+    CONSTRAINT CK_breathing_sessions_duration CHECK (duration_seconds >= 0),
+    CONSTRAINT CK_breathing_sessions_cycles CHECK (cycles_completed >= 0 AND total_cycles >= 0)
+);
+GO
+
+CREATE TABLE dbo.sleep_sessions (
+    id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_sleep_sessions PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    track_id NVARCHAR(100) NULL,
+    track_title NVARCHAR(255) NULL,
+    duration_ms INT NOT NULL CONSTRAINT DF_sleep_sessions_duration DEFAULT 0,
+    listened_ms INT NOT NULL CONSTRAINT DF_sleep_sessions_listened DEFAULT 0,
+    completed BIT NOT NULL CONSTRAINT DF_sleep_sessions_completed DEFAULT 0,
+    created_at DATETIME2(3) NOT NULL CONSTRAINT DF_sleep_sessions_created_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_sleep_sessions_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
+    CONSTRAINT CK_sleep_sessions_duration CHECK (duration_ms >= 0 AND listened_ms >= 0)
 );
 GO
 
@@ -234,6 +264,8 @@ GO
 CREATE INDEX IX_assessment_results_user_created ON dbo.assessment_results(user_id, created_at DESC);
 CREATE INDEX IX_mood_checkins_user_created ON dbo.mood_checkins(user_id, created_at DESC);
 CREATE INDEX IX_journals_user_created ON dbo.journals(user_id, created_at DESC);
+CREATE INDEX IX_breathing_sessions_user_created ON dbo.breathing_sessions(user_id, created_at DESC);
+CREATE INDEX IX_sleep_sessions_user_created ON dbo.sleep_sessions(user_id, created_at DESC);
 CREATE INDEX IX_posts_created_active ON dbo.posts(created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX IX_posts_user_created ON dbo.posts(user_id, created_at DESC);
 CREATE INDEX IX_comments_post_parent_created ON dbo.comments(post_id, parent_comment_id, created_at DESC);

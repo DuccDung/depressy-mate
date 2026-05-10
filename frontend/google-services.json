@@ -1,0 +1,92 @@
+{
+  "project_info": {
+    "project_number": "209067163802",
+    "project_id": "depressy-mate",
+    "storage_bucket": "depressy-mate.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209067163802:android:e6fd79d725d70e2db91f23",
+        "android_client_info": {
+          "package_name": "com.duccdung.auth"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209067163802-h7s7a666ma2lek31e0sf84la33ucbu2e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.duccdung.auth",
+            "certificate_hash": "7c8ead6408d3d2a99382620262d8b3685e04bb39"
+          }
+        },
+        {
+          "client_id": "209067163802-sjkdipqhottv6fd71okp5m4jvopmj9ck.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.duccdung.auth",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "209067163802-cqnb5h4ffstjhghaahrae8h004hngsgs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUSRw_rK8XJBraFdSaqv6SQShGUYXn1xM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209067163802-cqnb5h4ffstjhghaahrae8h004hngsgs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209067163802:android:324767748716c1e7b91f23",
+        "android_client_info": {
+          "package_name": "com.ngocanh208.frontend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209067163802-uud2actsst1oq9hmdadkbptbm9tjl2tk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ngocanh208.frontend",
+            "certificate_hash": "478c97e7428df01462e495f87fa1257df7efa3b9"
+          }
+        },
+        {
+          "client_id": "209067163802-cqnb5h4ffstjhghaahrae8h004hngsgs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUSRw_rK8XJBraFdSaqv6SQShGUYXn1xM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209067163802-cqnb5h4ffstjhghaahrae8h004hngsgs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
