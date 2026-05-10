@@ -35,7 +35,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token hết hạn hoặc không hợp lệ
-      AsyncStorage.removeItem('userToken');
+      AsyncStorage.multiRemove(['userToken', 'userData']);
     }
     return Promise.reject(error);
   }

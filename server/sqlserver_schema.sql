@@ -157,7 +157,13 @@ GO
 CREATE TABLE dbo.conversations (
     id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_conversations PRIMARY KEY DEFAULT NEWID(),
     type NVARCHAR(20) NOT NULL CONSTRAINT DF_conversations_type DEFAULT 'DIRECT',
+    name NVARCHAR(255) NULL,
+    avatar_url NVARCHAR(1000) NULL,
+    created_by UNIQUEIDENTIFIER NULL,
     created_at DATETIME2(3) NOT NULL CONSTRAINT DF_conversations_created_at DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2(3) NOT NULL CONSTRAINT DF_conversations_updated_at DEFAULT SYSUTCDATETIME(),
+    last_message_at DATETIME2(3) NULL,
+    CONSTRAINT FK_conversations_created_by FOREIGN KEY (created_by) REFERENCES dbo.users(id),
     CONSTRAINT CK_conversations_type CHECK (type IN ('DIRECT', 'GROUP'))
 );
 GO
@@ -165,10 +171,14 @@ GO
 CREATE TABLE dbo.conversation_participants (
     conversation_id UNIQUEIDENTIFIER NOT NULL,
     user_id UNIQUEIDENTIFIER NOT NULL,
+    role NVARCHAR(20) NOT NULL CONSTRAINT DF_conversation_participants_role DEFAULT 'MEMBER',
     joined_at DATETIME2(3) NOT NULL CONSTRAINT DF_conversation_participants_joined_at DEFAULT SYSUTCDATETIME(),
+    last_read_at DATETIME2(3) NULL,
+    left_at DATETIME2(3) NULL,
     CONSTRAINT PK_conversation_participants PRIMARY KEY (conversation_id, user_id),
     CONSTRAINT FK_conversation_participants_conversations FOREIGN KEY (conversation_id) REFERENCES dbo.conversations(id) ON DELETE CASCADE,
-    CONSTRAINT FK_conversation_participants_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE
+    CONSTRAINT FK_conversation_participants_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
+    CONSTRAINT CK_conversation_participants_role CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER'))
 );
 GO
 
@@ -177,10 +187,15 @@ CREATE TABLE dbo.messages (
     conversation_id UNIQUEIDENTIFIER NOT NULL,
     sender_id UNIQUEIDENTIFIER NOT NULL,
     content NVARCHAR(MAX) NOT NULL,
+    message_type NVARCHAR(20) NOT NULL CONSTRAINT DF_messages_message_type DEFAULT 'TEXT',
+    media_url NVARCHAR(1000) NULL,
     is_read BIT NOT NULL CONSTRAINT DF_messages_is_read DEFAULT 0,
     created_at DATETIME2(3) NOT NULL CONSTRAINT DF_messages_created_at DEFAULT SYSUTCDATETIME(),
+    edited_at DATETIME2(3) NULL,
+    deleted_at DATETIME2(3) NULL,
     CONSTRAINT FK_messages_conversations FOREIGN KEY (conversation_id) REFERENCES dbo.conversations(id) ON DELETE CASCADE,
-    CONSTRAINT FK_messages_users FOREIGN KEY (sender_id) REFERENCES dbo.users(id)
+    CONSTRAINT FK_messages_users FOREIGN KEY (sender_id) REFERENCES dbo.users(id),
+    CONSTRAINT CK_messages_message_type CHECK (message_type IN ('TEXT', 'IMAGE', 'FILE', 'SYSTEM'))
 );
 GO
 
@@ -190,6 +205,7 @@ CREATE INDEX IX_journals_user_created ON dbo.journals(user_id, created_at DESC);
 CREATE INDEX IX_posts_created_active ON dbo.posts(created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX IX_posts_user_created ON dbo.posts(user_id, created_at DESC);
 CREATE INDEX IX_comments_post_created ON dbo.comments(post_id, created_at DESC);
+CREATE INDEX IX_conversations_updated ON dbo.conversations(updated_at DESC);
 CREATE INDEX IX_conversation_participants_user ON dbo.conversation_participants(user_id);
 CREATE INDEX IX_messages_conversation_created ON dbo.messages(conversation_id, created_at DESC);
 CREATE INDEX IX_messages_unread ON dbo.messages(conversation_id, sender_id, is_read);

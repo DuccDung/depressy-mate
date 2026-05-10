@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import socketService from '../services/socket';
 
 export interface User {
   id: string;
@@ -51,6 +52,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const persistAuthSession = async (newToken: string, userData: User) => {
+    if (token && token !== newToken) {
+      await socketService.disconnect();
+    }
+
     await AsyncStorage.setItem('userToken', newToken);
     await AsyncStorage.setItem('userData', JSON.stringify(userData));
 
@@ -88,8 +93,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('userData');
+    await socketService.disconnect();
+    await AsyncStorage.multiRemove(['userToken', 'userData']);
     setToken(null);
     setUser(null);
   };

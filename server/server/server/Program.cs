@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.IdentityModel.Tokens;
+using server.Hubs;
 using server.Infrastructure;
 using server.Models;
 using server.Services;
 using System.Security.Claims;
+using System.Text;
 
 DotEnv.Load(
     Path.Combine(Directory.GetCurrentDirectory(), ".env"),
@@ -18,6 +22,7 @@ builder.Services.AddDbContext<DepressyMateContext>(options =>
         builder.Configuration.GetConnectionString("DepressyMate")
     ));
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<ChatService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
@@ -88,6 +93,37 @@ builder.Services
 
             return Task.CompletedTask;
         };
+    })
+    .AddJwtBearer(options =>
+    {
+        var secret = builder.Configuration["Jwt:Secret"]
+            ?? throw new InvalidOperationException("Missing Jwt:Secret in .env or environment variables.");
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.AddCors(options =>
 {
@@ -110,6 +146,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -134,6 +171,7 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.MapControllerRoute(
     name: "default",

@@ -9,7 +9,13 @@ public partial class ConversationParticipant
 
     public Guid UserId { get; set; }
 
+    public string Role { get; set; } = null!;
+
     public DateTime JoinedAt { get; set; }
+
+    public DateTime? LastReadAt { get; set; }
+
+    public DateTime? LeftAt { get; set; }
 
     public virtual Conversation Conversation { get; set; } = null!;
 

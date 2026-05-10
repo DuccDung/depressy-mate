@@ -138,17 +138,33 @@ public partial class DepressyMateContext : DbContext
         {
             entity.ToTable("conversations");
 
+            entity.HasIndex(e => e.UpdatedAt, "IX_conversations_updated").IsDescending();
+
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("(newid())")
                 .HasColumnName("id");
+            entity.Property(e => e.AvatarUrl)
+                .HasMaxLength(1000)
+                .HasColumnName("avatar_url");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())")
                 .HasColumnName("created_at");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.LastMessageAt)
+                .HasPrecision(3)
+                .HasColumnName("last_message_at");
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .HasColumnName("name");
             entity.Property(e => e.Type)
                 .HasMaxLength(20)
                 .HasDefaultValue("DIRECT")
                 .HasColumnName("type");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<ConversationParticipant>(entity =>
@@ -165,6 +181,16 @@ public partial class DepressyMateContext : DbContext
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())")
                 .HasColumnName("joined_at");
+            entity.Property(e => e.LastReadAt)
+                .HasPrecision(3)
+                .HasColumnName("last_read_at");
+            entity.Property(e => e.LeftAt)
+                .HasPrecision(3)
+                .HasColumnName("left_at");
+            entity.Property(e => e.Role)
+                .HasMaxLength(20)
+                .HasDefaultValue("MEMBER")
+                .HasColumnName("role");
 
             entity.HasOne(d => d.Conversation).WithMany(p => p.ConversationParticipants)
                 .HasForeignKey(d => d.ConversationId)
@@ -263,7 +289,20 @@ public partial class DepressyMateContext : DbContext
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())")
                 .HasColumnName("created_at");
+            entity.Property(e => e.DeletedAt)
+                .HasPrecision(3)
+                .HasColumnName("deleted_at");
+            entity.Property(e => e.EditedAt)
+                .HasPrecision(3)
+                .HasColumnName("edited_at");
             entity.Property(e => e.IsRead).HasColumnName("is_read");
+            entity.Property(e => e.MediaUrl)
+                .HasMaxLength(1000)
+                .HasColumnName("media_url");
+            entity.Property(e => e.MessageType)
+                .HasMaxLength(20)
+                .HasDefaultValue("TEXT")
+                .HasColumnName("message_type");
             entity.Property(e => e.SenderId).HasColumnName("sender_id");
 
             entity.HasOne(d => d.Conversation).WithMany(p => p.Messages)

@@ -9,7 +9,17 @@ public partial class Conversation
 
     public string Type { get; set; } = null!;
 
+    public string? Name { get; set; }
+
+    public string? AvatarUrl { get; set; }
+
+    public Guid? CreatedBy { get; set; }
+
     public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
+
+    public DateTime? LastMessageAt { get; set; }
 
     public virtual ICollection<ConversationParticipant> ConversationParticipants { get; set; } = new List<ConversationParticipant>();
 
