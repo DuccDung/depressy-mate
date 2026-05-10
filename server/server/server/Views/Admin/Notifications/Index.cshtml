@@ -1,0 +1,125 @@
+@model server.Models.Admin.AdminPushNotificationViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Gửi thông báo đẩy";
+}
+
+<main class="admin-dashboard">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+            <a class="active" asp-controller="AdminNotifications" asp-action="Index">Thông báo đẩy</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        @if (TempData["AdminNotificationSuccess"] is string successMessage)
+        {
+            <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
+        }
+
+        @if (TempData["AdminNotificationError"] is string errorMessage)
+        {
+            <div class="admin-alert admin-alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <section class="admin-notification-stat-grid" aria-label="Thống kê token thông báo">
+            <article class="admin-stat-card">
+                <span>Tổng người dùng</span>
+                <strong>@Model.TotalUsers</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Có token active</span>
+                <strong>@Model.UsersWithActiveTokens</strong>
+            </article>
+            <article class="admin-stat-card">
+                <span>Thiết bị active</span>
+                <strong>@Model.ActiveTokenCount</strong>
+            </article>
+        </section>
+
+        <section class="admin-panel admin-notification-panel">
+            <div class="admin-panel-title">
+                <div>
+                    <h2>Nội dung thông báo</h2>
+                    <p>Thông báo sẽ hiển thị trên thiết bị khi app ở nền hoặc đã đóng. Khi app đang mở, mobile hiện đang nhận qua handler foreground.</p>
+                </div>
+            </div>
+
+            <form asp-controller="AdminNotifications" asp-action="Send" method="post" class="admin-user-form">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+                <div class="admin-form-grid">
+                    <label class="admin-field">
+                        <span>Tiêu đề</span>
+                        <input asp-for="Title" maxlength="80" placeholder="Depressy Mate" />
+                        <span asp-validation-for="Title" class="admin-validation"></span>
+                    </label>
+
+                    <label class="admin-field">
+                        <span>Đối tượng nhận</span>
+                        <select asp-for="TargetMode">
+                            <option value="all">Gửi tất cả thiết bị active</option>
+                            <option value="selected">Chỉ gửi người được chọn</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="admin-field">
+                    <span>Nội dung</span>
+                    <textarea asp-for="Body" rows="4" maxlength="120" placeholder="Nhập nội dung ngắn gọn để gửi tới app"></textarea>
+                    <span asp-validation-for="Body" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Chọn người dùng khi gửi theo danh sách</span>
+                    <select asp-for="SelectedUserIds" multiple size="12" class="admin-multi-select">
+                        @foreach (var user in Model.Users)
+                        {
+                            if (user.IsSelected)
+                            {
+                                <option value="@user.Id" selected>
+                                    @user.DisplayName (@user.Role, @user.ActivePushTokenCount token)
+                                </option>
+                            }
+                            else
+                            {
+                                <option value="@user.Id">
+                                    @user.DisplayName (@user.Role, @user.ActivePushTokenCount token)
+                                </option>
+                            }
+                        }
+                    </select>
+                    <small class="admin-field-hint">
+                        Giữ Ctrl hoặc Shift để chọn nhiều người. User có 0 token active sẽ không có thiết bị nhận thông báo.
+                    </small>
+                    <span asp-validation-for="SelectedUserIds" class="admin-validation"></span>
+                </label>
+
+                <div class="admin-form-actions">
+                    <button type="submit" class="admin-primary-button">Gửi thông báo</button>
+                    <a class="admin-secondary-link" asp-controller="AdminNotifications" asp-action="Index">Làm mới</a>
+                </div>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -23,6 +23,7 @@ builder.Services.AddDbContext<DepressyMateContext>(options =>
     ));
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<PushNotificationService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));

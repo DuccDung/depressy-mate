@@ -2,6 +2,12 @@ import React, { createContext, useState, useEffect, useContext, useCallback, Rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import socketService from '../services/socket';
+import {
+  deactivateCurrentDevicePushToken,
+  listenFirebaseForegroundMessages,
+  listenFirebaseTokenRefresh,
+  registerCurrentDevicePushToken,
+} from '../services/firebaseMessagingService';
 
 export interface User {
   id: string;
@@ -57,6 +63,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     loadToken();
   }, []);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    registerCurrentDevicePushToken().catch((error) => {
+      console.log('Push notification registration failed:', error?.message || error);
+    });
+
+    const unsubscribeForeground = listenFirebaseForegroundMessages();
+    const unsubscribeTokenRefresh = listenFirebaseTokenRefresh();
+
+    return () => {
+      unsubscribeForeground();
+      unsubscribeTokenRefresh();
+    };
+  }, [token]);
 
   const persistAuthSession = async (newToken: string, userData: User) => {
     if (token && token !== newToken) {
@@ -117,6 +141,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await socketService.disconnect();
+    await deactivateCurrentDevicePushToken().catch((error) => {
+      console.log('Push notification deactivate failed:', error?.message || error);
+    });
     await AsyncStorage.multiRemove(['userToken', 'userData']);
     setToken(null);
     setUser(null);

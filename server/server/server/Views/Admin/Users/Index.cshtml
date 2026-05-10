@@ -21,20 +21,11 @@
             <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
             <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
             <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+            <a asp-controller="AdminNotifications" asp-action="Index">Thông báo đẩy</a>
         </nav>
     </aside>
 
     <section class="admin-main">
-        <header class="admin-page-header">
-            <div>
-                <p class="admin-kicker">Quản trị tài khoản</p>
-                <h1>Quản lý người dùng</h1>
-                <p>Theo dõi hồ sơ, quyền truy cập và thông tin hoạt động của người dùng.</p>
-            </div>
-
-            <a class="admin-primary-link" asp-controller="AdminUsers" asp-action="Create">Thêm người dùng</a>
-        </header>
-
         @if (TempData["AdminUserSuccess"] is string successMessage)
         {
             <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
@@ -104,6 +95,7 @@
                 <div class="admin-filter-actions">
                     <button type="submit" class="admin-primary-button">Lọc danh sách</button>
                     <a class="admin-secondary-link" asp-controller="AdminUsers" asp-action="Index">Xóa lọc</a>
+                    <a class="admin-primary-link" asp-controller="AdminUsers" asp-action="Create">Thêm người dùng</a>
                 </div>
             </form>
         </section>

@@ -49,6 +49,8 @@ public partial class User
 
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
 
+    public virtual ICollection<UserPushToken> UserPushTokens { get; set; } = new List<UserPushToken>();
+
     public virtual ICollection<SleepSession> SleepSessions { get; set; } = new List<SleepSession>();
 
     public virtual Profile? Profile { get; set; }

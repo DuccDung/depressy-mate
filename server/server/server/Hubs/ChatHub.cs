@@ -10,11 +10,16 @@ namespace server.Hubs;
 public class ChatHub : Hub
 {
     private readonly ChatService _chatService;
+    private readonly PushNotificationService _pushNotificationService;
     private readonly ILogger<ChatHub> _logger;
 
-    public ChatHub(ChatService chatService, ILogger<ChatHub> logger)
+    public ChatHub(
+        ChatService chatService,
+        PushNotificationService pushNotificationService,
+        ILogger<ChatHub> logger)
     {
         _chatService = chatService;
+        _pushNotificationService = pushNotificationService;
         _logger = logger;
     }
 
@@ -63,6 +68,8 @@ public class ChatHub : Hub
                     conversation_id = parsedConversationId,
                     message
                 }, Context.ConnectionAborted);
+
+            await _pushNotificationService.SendChatMessageNotificationAsync(message, Context.ConnectionAborted);
 
             return message;
         }

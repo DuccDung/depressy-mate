@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -51,6 +52,33 @@ public class AdminController : Controller
                 .FirstOrDefaultAsync(item => item.Id == userId, cancellationToken)
             : null;
 
+        var today = DateTime.UtcNow.Date;
+        var dailyFrom = today.AddDays(-13);
+        var activeFrom = today.AddDays(-29);
+        var dailyActivity = await BuildDailyActivityAsync(dailyFrom, today, cancellationToken);
+        var activeUsers30Days = await CountActiveUsersAsync(activeFrom, cancellationToken);
+        var engagement14Days = dailyActivity.Sum(item => item.Interactions + item.Messages + item.Posts + item.Checkins);
+        var topPosts = await _context.Posts
+            .AsNoTracking()
+            .Include(item => item.User)
+            .ThenInclude(item => item.Profile)
+            .Where(item => item.DeletedAt == null)
+            .OrderByDescending(item => item.LikeCount + item.CommentCount)
+            .ThenByDescending(item => item.CreatedAt)
+            .Take(5)
+            .Select(item => new AdminTopPostViewModel
+            {
+                Id = item.Id,
+                AuthorName = item.User.Profile != null && item.User.Profile.FullName != null
+                    ? item.User.Profile.FullName
+                    : item.User.FullName ?? item.User.Email,
+                ContentPreview = item.Content ?? string.Empty,
+                LikeCount = item.LikeCount,
+                CommentCount = item.CommentCount,
+                CreatedAt = item.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
         var model = new AdminDashboardViewModel
         {
             AdminName = admin?.Profile?.FullName ?? admin?.FullName ?? User.Identity?.Name ?? "Admin",
@@ -61,10 +89,123 @@ public class AdminController : Controller
             TotalClinics = await _context.Clinics.CountAsync(cancellationToken),
             TotalAssessments = await _context.AssessmentResults.CountAsync(cancellationToken),
             TotalCheckins = await _context.MoodCheckins.CountAsync(cancellationToken),
-            TotalPosts = await _context.Posts.CountAsync(cancellationToken)
+            TotalPosts = await _context.Posts.CountAsync(cancellationToken),
+            TotalMessages = await _context.Messages.CountAsync(item => item.DeletedAt == null, cancellationToken),
+            TotalConversations = await _context.Conversations.CountAsync(cancellationToken),
+            DirectConversations = await _context.Conversations.CountAsync(item => item.Type == "DIRECT", cancellationToken),
+            GroupConversations = await _context.Conversations.CountAsync(item => item.Type == "GROUP", cancellationToken),
+            TotalPostLikes = await _context.PostLikes.CountAsync(cancellationToken),
+            TotalPostSaves = await _context.PostSaves.CountAsync(cancellationToken),
+            TotalComments = await _context.Comments.CountAsync(item => item.DeletedAt == null, cancellationToken),
+            ActiveUsers30Days = activeUsers30Days,
+            NewUsers14Days = dailyActivity.Sum(item => item.Users),
+            CommunityInteractions = await _context.PostLikes.CountAsync(cancellationToken) +
+                await _context.PostSaves.CountAsync(cancellationToken) +
+                await _context.Comments.CountAsync(item => item.DeletedAt == null, cancellationToken),
+            Engagement14Days = engagement14Days,
+            DailyActivity = dailyActivity,
+            TopPosts = topPosts
         };
 
         return View("~/Views/Admin/Index.cshtml", model);
+    }
+
+    private async Task<List<AdminDailyActivityPoint>> BuildDailyActivityAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken)
+    {
+        var posts = await _context.Posts
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var messages = await _context.Messages
+            .AsNoTracking()
+            .Where(item => item.DeletedAt == null && item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var likes = await _context.PostLikes
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var saves = await _context.PostSaves
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var comments = await _context.Comments
+            .AsNoTracking()
+            .Where(item => item.DeletedAt == null && item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var checkins = await _context.MoodCheckins
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var users = await _context.Users
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return Enumerable.Range(0, (to - from).Days + 1)
+            .Select(offset => from.AddDays(offset))
+            .Select(day =>
+            {
+                var nextDay = day.AddDays(1);
+                return new AdminDailyActivityPoint
+                {
+                    Label = day.ToString("dd/MM", CultureInfo.InvariantCulture),
+                    Posts = posts.Count(item => item >= day && item < nextDay),
+                    Messages = messages.Count(item => item >= day && item < nextDay),
+                    Interactions = likes.Count(item => item >= day && item < nextDay) +
+                        saves.Count(item => item >= day && item < nextDay) +
+                        comments.Count(item => item >= day && item < nextDay),
+                    Checkins = checkins.Count(item => item >= day && item < nextDay),
+                    Users = users.Count(item => item >= day && item < nextDay)
+                };
+            })
+            .ToList();
+    }
+
+    private async Task<int> CountActiveUsersAsync(DateTime from, CancellationToken cancellationToken)
+    {
+        var userIds = new HashSet<Guid>();
+        userIds.UnionWith(await _context.Posts
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.UserId)
+            .ToListAsync(cancellationToken));
+        userIds.UnionWith(await _context.Comments
+            .AsNoTracking()
+            .Where(item => item.DeletedAt == null && item.CreatedAt >= from)
+            .Select(item => item.UserId)
+            .ToListAsync(cancellationToken));
+        userIds.UnionWith(await _context.Messages
+            .AsNoTracking()
+            .Where(item => item.DeletedAt == null && item.CreatedAt >= from)
+            .Select(item => item.SenderId)
+            .ToListAsync(cancellationToken));
+        userIds.UnionWith(await _context.MoodCheckins
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.UserId)
+            .ToListAsync(cancellationToken));
+        userIds.UnionWith(await _context.Journals
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.UserId)
+            .ToListAsync(cancellationToken));
+        userIds.UnionWith(await _context.AssessmentResults
+            .AsNoTracking()
+            .Where(item => item.CreatedAt >= from)
+            .Select(item => item.UserId)
+            .ToListAsync(cancellationToken));
+
+        return userIds.Count;
     }
 
     [HttpGet("login")]

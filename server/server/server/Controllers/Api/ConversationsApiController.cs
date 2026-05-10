@@ -15,11 +15,16 @@ namespace server.Controllers.Api;
 public class ConversationsApiController : ControllerBase
 {
     private readonly ChatService _chatService;
+    private readonly PushNotificationService _pushNotificationService;
     private readonly IHubContext<ChatHub> _hubContext;
 
-    public ConversationsApiController(ChatService chatService, IHubContext<ChatHub> hubContext)
+    public ConversationsApiController(
+        ChatService chatService,
+        PushNotificationService pushNotificationService,
+        IHubContext<ChatHub> hubContext)
     {
         _chatService = chatService;
+        _pushNotificationService = pushNotificationService;
         _hubContext = hubContext;
     }
 
@@ -120,6 +125,7 @@ public class ConversationsApiController : ControllerBase
                     conversation_id = id,
                     message
                 }, cancellationToken);
+            await _pushNotificationService.SendChatMessageNotificationAsync(message, cancellationToken);
             return Created($"/api/conversations/{id}/messages/{message.Id}", message);
         }
         catch (ChatOperationException exception)

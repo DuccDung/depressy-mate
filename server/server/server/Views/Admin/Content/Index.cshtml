@@ -5,7 +5,7 @@
     ViewData["Title"] = "Quản lý nội dung";
 }
 
-<main class="admin-dashboard admin-compact-page">
+<main class="admin-dashboard admin-compact-page admin-content-page">
     <aside class="admin-sidebar">
         <div class="admin-brand-row">
             <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
@@ -21,20 +21,11 @@
             <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
             <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
             <a class="active" asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+            <a asp-controller="AdminNotifications" asp-action="Index">Thông báo đẩy</a>
         </nav>
     </aside>
 
     <section class="admin-main">
-        <header class="admin-page-header compact">
-            <div>
-                <p class="admin-kicker">Cộng đồng</p>
-                <h1>Quản lý nội dung</h1>
-                <p>Duyệt, chỉnh sửa, ẩn hoặc xóa các bài viết hiển thị trong app.</p>
-            </div>
-
-            <a class="admin-primary-link compact" asp-controller="AdminContent" asp-action="Create">Thêm bài viết</a>
-        </header>
-
         @if (TempData["AdminContentSuccess"] is string successMessage)
         {
             <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
@@ -46,25 +37,56 @@
         }
 
         <section class="admin-content-overview" aria-label="Thống kê nội dung">
-            <article>
+            <article class="highlight">
                 <span>Tổng bài viết</span>
                 <strong>@Model.TotalPosts</strong>
+                <small>Tất cả nội dung cộng đồng</small>
             </article>
             <article>
                 <span>Đang hiển thị</span>
                 <strong>@Model.ActivePosts</strong>
+                <small>Người dùng đang xem được</small>
             </article>
             <article>
                 <span>Đã ẩn</span>
                 <strong>@Model.HiddenPosts</strong>
+                <small>Đã gỡ khỏi app</small>
             </article>
             <article>
-                <span>Có ảnh</span>
+                <span>Có media</span>
                 <strong>@Model.WithMediaPosts</strong>
+                <small>Ảnh hoặc video đính kèm</small>
             </article>
         </section>
 
-        <section class="admin-panel compact-panel">
+        <section class="admin-panel compact-panel admin-content-toolbar">
+            <div class="admin-content-status-tabs" aria-label="Lọc nhanh trạng thái nội dung">
+                <a class="@(Model.Status == "active" ? "active" : string.Empty)"
+                   asp-controller="AdminContent"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-status="active">
+                    <span>Đang hiển thị</span>
+                    <strong>@Model.ActivePosts</strong>
+                </a>
+                <a class="@(Model.Status == "hidden" ? "active" : string.Empty)"
+                   asp-controller="AdminContent"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-status="hidden">
+                    <span>Đã ẩn</span>
+                    <strong>@Model.HiddenPosts</strong>
+                </a>
+                <a class="@(Model.Status == "all" ? "active" : string.Empty)"
+                   asp-controller="AdminContent"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-status="all">
+                    <span>Tất cả</span>
+                    <strong>@Model.TotalPosts</strong>
+                </a>
+            </div>
+
             <form asp-controller="AdminContent" asp-action="Index" method="get" class="admin-content-filter">
                 <label class="admin-field">
                     <span>Tìm kiếm</span>
@@ -83,54 +105,77 @@
                 <div class="admin-filter-actions">
                     <button type="submit" class="admin-primary-button compact">Lọc</button>
                     <a class="admin-secondary-link compact" asp-controller="AdminContent" asp-action="Index">Xóa lọc</a>
+                    <a class="admin-primary-link compact" asp-controller="AdminContent" asp-action="Create">Thêm bài viết</a>
                 </div>
             </form>
         </section>
 
         <section class="admin-content-list" aria-label="Danh sách nội dung">
+            <div class="admin-content-list-head">
+                <div>
+                    <h2>Danh sách bài viết</h2>
+                    <p>Hiển thị tối đa 200 bài mới nhất theo bộ lọc hiện tại.</p>
+                </div>
+                <span>@Model.Posts.Count bài viết</span>
+            </div>
+
             @if (Model.Posts.Count == 0)
             {
-                <div class="admin-panel compact-panel admin-empty-cell">Chưa có bài viết phù hợp.</div>
+                <div class="admin-panel compact-panel admin-content-empty">
+                    <strong>Chưa có bài viết phù hợp</strong>
+                    <span>Thử đổi từ khóa, trạng thái hoặc tạo bài viết mới.</span>
+                </div>
             }
             else
             {
                 foreach (var post in Model.Posts)
                 {
                     <article class="admin-content-card @(post.IsHidden ? "is-hidden" : string.Empty)">
-                        <div class="admin-content-author">
-                            @if (!string.IsNullOrWhiteSpace(post.AuthorAvatarUrl))
-                            {
-                                <img src="@post.AuthorAvatarUrl" alt="@post.AuthorName" />
-                            }
-                            else
-                            {
-                                <span>@post.AuthorName.Substring(0, 1).ToUpperInvariant()</span>
-                            }
+                        <div class="admin-content-card-main">
+                            <div class="admin-content-card-head">
+                                <div class="admin-content-author">
+                                    @if (!string.IsNullOrWhiteSpace(post.AuthorAvatarUrl))
+                                    {
+                                        <img src="@post.AuthorAvatarUrl" alt="@post.AuthorName" />
+                                    }
+                                    else
+                                    {
+                                        <span>@post.AuthorName.Substring(0, 1).ToUpperInvariant()</span>
+                                    }
 
-                            <div>
-                                <h2>@post.AuthorName</h2>
-                                <p>@post.AuthorEmail</p>
-                            </div>
-                        </div>
-
-                        <div class="admin-content-body">
-                            <div class="admin-content-status-row">
-                                <span class="admin-status-pill @(post.IsHidden ? "muted" : "success")">@(post.IsHidden ? "Đã ẩn" : "Đang hiển thị")</span>
-                                <small>@post.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
-                            </div>
-
-                            <p>@(string.IsNullOrWhiteSpace(post.ContentPreview) ? "Bài viết chỉ có hình ảnh." : post.ContentPreview)</p>
-
-                            @if (!string.IsNullOrWhiteSpace(post.MediaUrl))
-                            {
-                                <div class="admin-content-media">
-                                    <img src="@post.MediaUrl" alt="Ảnh bài viết" />
+                                    <div>
+                                        <h2>@post.AuthorName</h2>
+                                        <p>@post.AuthorEmail</p>
+                                    </div>
                                 </div>
-                            }
+
+                                <div class="admin-content-state">
+                                    <span class="admin-status-pill @(post.IsHidden ? "muted" : "success")">@(post.IsHidden ? "Đã ẩn" : "Đang hiển thị")</span>
+                                    <small>@post.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                                </div>
+                            </div>
+
+                            <div class="admin-content-body">
+                                <p>@(string.IsNullOrWhiteSpace(post.ContentPreview) ? "Bài viết chỉ có media đính kèm." : post.ContentPreview)</p>
+
+                                @if (!string.IsNullOrWhiteSpace(post.MediaUrl))
+                                {
+                                    <div class="admin-content-media @(string.Equals(post.MediaType, "VIDEO", StringComparison.OrdinalIgnoreCase) ? "is-video" : string.Empty)">
+                                        @if (string.Equals(post.MediaType, "VIDEO", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <video src="@post.MediaUrl" controls preload="metadata"></video>
+                                        }
+                                        else
+                                        {
+                                            <img src="@post.MediaUrl" alt="Media bài viết" />
+                                        }
+                                    </div>
+                                }
+                            </div>
 
                             <div class="admin-content-foot">
-                                <span>@post.LikeCount lượt thích</span>
-                                <span>@post.CommentCount bình luận</span>
+                                <span><strong>@post.LikeCount</strong> lượt thích</span>
+                                <span><strong>@post.CommentCount</strong> bình luận</span>
                                 <span>Cập nhật @post.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
                             </div>
                         </div>

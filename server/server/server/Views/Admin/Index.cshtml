@@ -3,6 +3,8 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Bảng điều khiển quản trị";
+    var maxDailyActivity = Math.Max(1, Model.DailyActivity.Count == 0 ? 1 : Model.DailyActivity.Max(item => item.Total));
+    var maxTopPostScore = Math.Max(1, Model.TopPosts.Count == 0 ? 1 : Model.TopPosts.Max(item => item.Score));
 }
 
 <main class="admin-dashboard">
@@ -21,36 +23,26 @@
             <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
             <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
             <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+            <a asp-controller="AdminNotifications" asp-action="Index">Thông báo đẩy</a>
         </nav>
     </aside>
 
     <section class="admin-main">
-        <header class="admin-topbar">
+        <section class="admin-dashboard-toolbar">
             <div>
-                <p class="admin-kicker">Trang chủ admin</p>
-                <h1>Xin chào, @Model.AdminName</h1>
+                <span class="admin-section-label">Tổng quan</span>
+                <p>Theo dõi nhanh người dùng, cộng đồng, chat và các tín hiệu hoạt động chính.</p>
             </div>
 
-            <div class="admin-account">
+            <div class="admin-account compact">
                 <div>
-                    <strong>@Model.AdminRole</strong>
-                    <span>@Model.AdminEmail</span>
+                    <strong>@Model.AdminName</strong>
+                    <span>@Model.AdminRole · @Model.AdminEmail</span>
                 </div>
                 <form asp-controller="Admin" asp-action="Logout" method="post">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="admin-ghost-button">Đăng xuất</button>
                 </form>
-            </div>
-        </header>
-
-        <section class="admin-hero-band">
-            <div>
-                <p class="admin-kicker">Vận hành Depressy Mate</p>
-                <h2>Bảng điều khiển quản trị đã sẵn sàng</h2>
-                <p>
-                    Đây là khung admin web riêng cho quản lý hệ thống. Các module tiếp theo
-                    có thể gắn vào sidebar mà không ảnh hưởng đến mobile app.
-                </p>
             </div>
         </section>
 
@@ -78,6 +70,169 @@
             <article class="admin-stat-card">
                 <span>Bài viết</span>
                 <strong>@Model.TotalPosts</strong>
+            </article>
+        </section>
+
+        <section class="admin-dashboard-insights" aria-label="Biểu đồ tương tác hệ thống">
+            <article class="admin-chart-panel admin-activity-panel">
+                <div class="admin-panel-title">
+                    <div>
+                        <h2>Hoạt động 14 ngày</h2>
+                        <p>Bài viết, chat, tương tác cộng đồng, check-in và người dùng mới.</p>
+                    </div>
+                    <span class="admin-chart-total">@Model.Engagement14Days tương tác</span>
+                </div>
+
+                <div class="admin-chart-legend" aria-label="Chú thích biểu đồ">
+                    <span class="posts">Bài viết</span>
+                    <span class="messages">Chat</span>
+                    <span class="interactions">Like, lưu, bình luận</span>
+                    <span class="checkins">Check-in</span>
+                    <span class="users">User mới</span>
+                </div>
+
+                <div class="admin-stacked-chart">
+                    @foreach (var point in Model.DailyActivity)
+                    {
+                        var postsHeight = point.Total == 0 ? 0 : Math.Round(point.Posts * 100.0 / maxDailyActivity, 2);
+                        var messagesHeight = point.Total == 0 ? 0 : Math.Round(point.Messages * 100.0 / maxDailyActivity, 2);
+                        var interactionsHeight = point.Total == 0 ? 0 : Math.Round(point.Interactions * 100.0 / maxDailyActivity, 2);
+                        var checkinsHeight = point.Total == 0 ? 0 : Math.Round(point.Checkins * 100.0 / maxDailyActivity, 2);
+                        var usersHeight = point.Total == 0 ? 0 : Math.Round(point.Users * 100.0 / maxDailyActivity, 2);
+
+                        <div class="admin-stacked-day" title="@point.Label: @point.Total hoạt động">
+                            <div class="admin-stacked-bar">
+                                <span class="users" style="height:@usersHeight%"></span>
+                                <span class="checkins" style="height:@checkinsHeight%"></span>
+                                <span class="interactions" style="height:@interactionsHeight%"></span>
+                                <span class="messages" style="height:@messagesHeight%"></span>
+                                <span class="posts" style="height:@postsHeight%"></span>
+                            </div>
+                            <small>@point.Label</small>
+                        </div>
+                    }
+                </div>
+            </article>
+
+            <aside class="admin-side-metrics">
+                <article class="admin-chart-panel">
+                    <div class="admin-panel-title">
+                        <div>
+                            <h2>Chat</h2>
+                            <p>Tổng quan tin nhắn và cuộc trò chuyện.</p>
+                        </div>
+                    </div>
+                    <div class="admin-metric-list">
+                        <div>
+                            <span>Tin nhắn</span>
+                            <strong>@Model.TotalMessages</strong>
+                        </div>
+                        <div>
+                            <span>Cuộc trò chuyện</span>
+                            <strong>@Model.TotalConversations</strong>
+                        </div>
+                        <div>
+                            <span>Chat 1-1</span>
+                            <strong>@Model.DirectConversations</strong>
+                        </div>
+                        <div>
+                            <span>Nhóm chat</span>
+                            <strong>@Model.GroupConversations</strong>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="admin-chart-panel">
+                    <div class="admin-panel-title">
+                        <div>
+                            <h2>Tương tác</h2>
+                            <p>Like, bình luận và lưu bài viết.</p>
+                        </div>
+                    </div>
+                    <div class="admin-metric-list compact">
+                        <div>
+                            <span>Lượt thích</span>
+                            <strong>@Model.TotalPostLikes</strong>
+                        </div>
+                        <div>
+                            <span>Bình luận</span>
+                            <strong>@Model.TotalComments</strong>
+                        </div>
+                        <div>
+                            <span>Lưu bài</span>
+                            <strong>@Model.TotalPostSaves</strong>
+                        </div>
+                        <div>
+                            <span>User active 30 ngày</span>
+                            <strong>@Model.ActiveUsers30Days</strong>
+                        </div>
+                    </div>
+                </article>
+            </aside>
+        </section>
+
+        <section class="admin-dashboard-lower" aria-label="Nội dung và tương tác nổi bật">
+            <article class="admin-chart-panel">
+                <div class="admin-panel-title">
+                    <div>
+                        <h2>Top bài viết tương tác</h2>
+                        <p>Xếp hạng theo tổng lượt thích và bình luận.</p>
+                    </div>
+                    <a class="admin-secondary-link compact" asp-controller="AdminContent" asp-action="Index">Xem nội dung</a>
+                </div>
+
+                <div class="admin-top-post-list">
+                    @if (Model.TopPosts.Count == 0)
+                    {
+                        <div class="admin-empty-cell">Chưa có dữ liệu bài viết.</div>
+                    }
+                    else
+                    {
+                        foreach (var post in Model.TopPosts)
+                        {
+                            var scorePercent = Math.Round(post.Score * 100.0 / maxTopPostScore, 2);
+                            <div class="admin-top-post-row">
+                                <div>
+                                    <strong>@post.AuthorName</strong>
+                                    <p>@(string.IsNullOrWhiteSpace(post.ContentPreview) ? "Bài viết chỉ có media." : post.ContentPreview)</p>
+                                    <small>@post.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</small>
+                                </div>
+                                <div class="admin-top-post-score">
+                                    <span>@post.Score</span>
+                                    <div><i style="width:@scorePercent%"></i></div>
+                                    <small>@post.LikeCount thích · @post.CommentCount bình luận</small>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </article>
+
+            <article class="admin-chart-panel admin-funnel-panel">
+                <div class="admin-panel-title">
+                    <div>
+                        <h2>Sức khỏe hoạt động</h2>
+                        <p>Các tín hiệu cho thấy người dùng đang tương tác với app.</p>
+                    </div>
+                </div>
+                <div class="admin-health-grid">
+                    <div>
+                        <span>Người dùng mới 14 ngày</span>
+                        <strong>@Model.NewUsers14Days</strong>
+                    </div>
+                    <div>
+                        <span>Check-in</span>
+                        <strong>@Model.TotalCheckins</strong>
+                    </div>
+                    <div>
+                        <span>Bài đánh giá</span>
+                        <strong>@Model.TotalAssessments</strong>
+                    </div>
+                    <div>
+                        <span>Tương tác cộng đồng</span>
+                        <strong>@Model.CommunityInteractions</strong>
+                    </div>
+                </div>
             </article>
         </section>
 

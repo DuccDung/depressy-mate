@@ -49,6 +49,8 @@ public partial class DepressyMateContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<UserPushToken> UserPushTokens { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AssessmentResult>(entity =>
@@ -610,6 +612,52 @@ public partial class DepressyMateContext : DbContext
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())")
                 .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<UserPushToken>(entity =>
+        {
+            entity.ToTable("user_push_tokens");
+
+            entity.HasIndex(e => e.UserId, "IX_user_push_tokens_user_active");
+
+            entity.HasIndex(e => new { e.Provider, e.PushToken }, "UQ_user_push_tokens_provider_token")
+                .IsUnique()
+                .HasFilter("([push_token] IS NOT NULL)");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.DeviceName)
+                .HasMaxLength(255)
+                .HasColumnName("device_name");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+            entity.Property(e => e.OneSignalPlayerId)
+                .HasMaxLength(255)
+                .HasColumnName("onesignal_player_id");
+            entity.Property(e => e.Platform)
+                .HasMaxLength(50)
+                .HasColumnName("platform");
+            entity.Property(e => e.Provider)
+                .HasMaxLength(50)
+                .HasColumnName("provider");
+            entity.Property(e => e.PushToken)
+                .HasMaxLength(500)
+                .HasColumnName("push_token");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("updated_at");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserPushTokens)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_user_push_tokens_users");
         });
 
         OnModelCreatingPartial(modelBuilder);

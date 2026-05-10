@@ -14,6 +14,7 @@ IF OBJECT_ID('dbo.sleep_sessions', 'U') IS NOT NULL DROP TABLE dbo.sleep_session
 IF OBJECT_ID('dbo.breathing_sessions', 'U') IS NOT NULL DROP TABLE dbo.breathing_sessions;
 IF OBJECT_ID('dbo.mood_checkins', 'U') IS NOT NULL DROP TABLE dbo.mood_checkins;
 IF OBJECT_ID('dbo.assessment_results', 'U') IS NOT NULL DROP TABLE dbo.assessment_results;
+IF OBJECT_ID('dbo.user_push_tokens', 'U') IS NOT NULL DROP TABLE dbo.user_push_tokens;
 IF OBJECT_ID('dbo.profiles', 'U') IS NOT NULL DROP TABLE dbo.profiles;
 IF OBJECT_ID('dbo.clinics', 'U') IS NOT NULL DROP TABLE dbo.clinics;
 IF OBJECT_ID('dbo.doctors', 'U') IS NOT NULL DROP TABLE dbo.doctors;
@@ -31,6 +32,30 @@ CREATE TABLE dbo.users (
     CONSTRAINT UQ_users_email UNIQUE (email),
     CONSTRAINT CK_users_role CHECK (role IN ('USER', 'DOCTOR', 'ADMIN'))
 );
+GO
+
+CREATE TABLE dbo.user_push_tokens (
+    id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_user_push_tokens PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    provider NVARCHAR(50) NOT NULL,
+    push_token NVARCHAR(500) NULL,
+    onesignal_player_id NVARCHAR(255) NULL,
+    platform NVARCHAR(50) NULL,
+    device_name NVARCHAR(255) NULL,
+    is_active BIT NOT NULL CONSTRAINT DF_user_push_tokens_is_active DEFAULT 1,
+    created_at DATETIME2(3) NOT NULL CONSTRAINT DF_user_push_tokens_created_at DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2(3) NOT NULL CONSTRAINT DF_user_push_tokens_updated_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_user_push_tokens_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE
+);
+GO
+
+CREATE UNIQUE INDEX UQ_user_push_tokens_provider_token
+    ON dbo.user_push_tokens(provider, push_token)
+    WHERE push_token IS NOT NULL;
+GO
+
+CREATE INDEX IX_user_push_tokens_user_active
+    ON dbo.user_push_tokens(user_id, is_active);
 GO
 
 CREATE TABLE dbo.profiles (

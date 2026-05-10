@@ -33,4 +33,64 @@ public class AdminDashboardViewModel
     public int TotalCheckins { get; set; }
 
     public int TotalPosts { get; set; }
+
+    public int TotalMessages { get; set; }
+
+    public int TotalConversations { get; set; }
+
+    public int DirectConversations { get; set; }
+
+    public int GroupConversations { get; set; }
+
+    public int TotalPostLikes { get; set; }
+
+    public int TotalPostSaves { get; set; }
+
+    public int TotalComments { get; set; }
+
+    public int ActiveUsers30Days { get; set; }
+
+    public int NewUsers14Days { get; set; }
+
+    public int CommunityInteractions { get; set; }
+
+    public int Engagement14Days { get; set; }
+
+    public IReadOnlyList<AdminDailyActivityPoint> DailyActivity { get; set; } = [];
+
+    public IReadOnlyList<AdminTopPostViewModel> TopPosts { get; set; } = [];
+}
+
+public class AdminDailyActivityPoint
+{
+    public string Label { get; set; } = string.Empty;
+
+    public int Posts { get; set; }
+
+    public int Messages { get; set; }
+
+    public int Interactions { get; set; }
+
+    public int Checkins { get; set; }
+
+    public int Users { get; set; }
+
+    public int Total => Posts + Messages + Interactions + Checkins + Users;
+}
+
+public class AdminTopPostViewModel
+{
+    public Guid Id { get; set; }
+
+    public string AuthorName { get; set; } = string.Empty;
+
+    public string ContentPreview { get; set; } = string.Empty;
+
+    public int LikeCount { get; set; }
+
+    public int CommentCount { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+
+    public int Score => LikeCount + CommentCount;
 }
