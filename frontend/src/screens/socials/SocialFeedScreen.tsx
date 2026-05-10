@@ -114,6 +114,17 @@ export default function SocialFeedScreen({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleSave = async (postId: string) => {
+    try {
+      const result = await socialService.toggleSave(postId);
+      setPosts(prev => prev.map(p => (
+        p.id === postId ? { ...p, is_saved: result.is_saved } : p
+      )));
+    } catch (error) {
+      console.error('Lỗi lưu bài viết:', error);
+    }
+  };
+
   const handleCommentAdded = () => {
     // Tăng count khi chính mình tạo post
     setPosts(prev => prev.map(p => {
@@ -129,6 +140,7 @@ export default function SocialFeedScreen({ onClose }: { onClose: () => void }) {
       post={item}
       onLike={handleLike}
       onComment={(id) => setCommentPostId(id)}
+      onSave={handleSave}
     />
   );
 

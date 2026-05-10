@@ -21,6 +21,8 @@ public partial class DepressyMateContext : DbContext
 
     public virtual DbSet<Comment> Comments { get; set; }
 
+    public virtual DbSet<CommentLike> CommentLikes { get; set; }
+
     public virtual DbSet<Conversation> Conversations { get; set; }
 
     public virtual DbSet<ConversationParticipant> ConversationParticipants { get; set; }
@@ -36,6 +38,8 @@ public partial class DepressyMateContext : DbContext
     public virtual DbSet<Post> Posts { get; set; }
 
     public virtual DbSet<PostLike> PostLikes { get; set; }
+
+    public virtual DbSet<PostSave> PostSaves { get; set; }
 
     public virtual DbSet<Profile> Profiles { get; set; }
 
@@ -111,7 +115,7 @@ public partial class DepressyMateContext : DbContext
         {
             entity.ToTable("comments");
 
-            entity.HasIndex(e => new { e.PostId, e.CreatedAt }, "IX_comments_post_created").IsDescending(false, true);
+            entity.HasIndex(e => new { e.PostId, e.ParentCommentId, e.CreatedAt }, "IX_comments_post_parent_created").IsDescending(false, false, true);
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("(newid())")
@@ -121,8 +125,22 @@ public partial class DepressyMateContext : DbContext
                 .HasPrecision(3)
                 .HasDefaultValueSql("(sysutcdatetime())")
                 .HasColumnName("created_at");
+            entity.Property(e => e.DeletedAt)
+                .HasPrecision(3)
+                .HasColumnName("deleted_at");
+            entity.Property(e => e.LikeCount).HasColumnName("like_count");
+            entity.Property(e => e.ParentCommentId).HasColumnName("parent_comment_id");
             entity.Property(e => e.PostId).HasColumnName("post_id");
+            entity.Property(e => e.ReplyCount).HasColumnName("reply_count");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("updated_at");
             entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.ParentComment).WithMany(p => p.InverseParentComment)
+                .HasForeignKey(d => d.ParentCommentId)
+                .HasConstraintName("FK_comments_parent");
 
             entity.HasOne(d => d.Post).WithMany(p => p.Comments)
                 .HasForeignKey(d => d.PostId)
@@ -132,6 +150,32 @@ public partial class DepressyMateContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_comments_users");
+        });
+
+        modelBuilder.Entity<CommentLike>(entity =>
+        {
+            entity.ToTable("comment_likes");
+
+            entity.HasIndex(e => new { e.CommentId, e.UserId }, "UQ_comment_likes_comment_user").IsUnique();
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.CommentId).HasColumnName("comment_id");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.Comment).WithMany(p => p.CommentLikes)
+                .HasForeignKey(d => d.CommentId)
+                .HasConstraintName("FK_comment_likes_comments");
+
+            entity.HasOne(d => d.User).WithMany(p => p.CommentLikes)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_comment_likes_users");
         });
 
         modelBuilder.Entity<Conversation>(entity =>
@@ -409,6 +453,34 @@ public partial class DepressyMateContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_post_likes_users");
+        });
+
+        modelBuilder.Entity<PostSave>(entity =>
+        {
+            entity.ToTable("post_saves");
+
+            entity.HasIndex(e => new { e.PostId, e.UserId }, "UQ_post_saves_post_user").IsUnique();
+
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt }, "IX_post_saves_user_created").IsDescending(false, true);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.PostId).HasColumnName("post_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.Post).WithMany(p => p.PostSaves)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_post_saves_posts");
+
+            entity.HasOne(d => d.User).WithMany(p => p.PostSaves)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_post_saves_users");
         });
 
         modelBuilder.Entity<Profile>(entity =>

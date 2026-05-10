@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Alert } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
 import { socialService } from '../../services/socialService';
+import { useAuth } from '../../contexts/AuthContext';
+import { UserAvatar } from '../../components/socials/UserAvatar';
 
 interface CreatePostScreenProps {
   visible: boolean;
@@ -13,119 +27,139 @@ interface CreatePostScreenProps {
 }
 
 export const CreatePostScreen: React.FC<CreatePostScreenProps> = ({ visible, onClose, onPostCreated }) => {
+  const { user } = useAuth();
   const [content, setContent] = useState('');
   const [mediaUri, setMediaUri] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
+  const [mediaType, setMediaType] = useState<'IMAGE' | 'VIDEO' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const pickMedia = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Cần quyền truy cập', 'Vui lòng cho phép ứng dụng truy cập thư viện ảnh/video.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'], // Chấp nhận cả ảnh và video
+      mediaTypes: ['images', 'videos'],
       allowsEditing: true,
-      quality: 0.8,
+      quality: 0.85,
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setMediaUri(result.assets[0].uri);
-      setMediaType(result.assets[0].type === 'video' ? 'VIDEO' : 'IMAGE');
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setMediaUri(asset.uri);
+      setMediaType(asset.type === 'video' ? 'VIDEO' : 'IMAGE');
     }
+  };
+
+  const closeAndReset = () => {
+    if (isUploading) return;
+    setContent('');
+    setMediaUri(null);
+    setMediaType(null);
+    onClose();
   };
 
   const handlePost = async () => {
     if (!mediaUri && !content.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập nội dung hoặc chọn một ảnh/video.');
+      Alert.alert('Thiếu nội dung', 'Hãy viết vài dòng hoặc chọn ảnh/video để chia sẻ.');
       return;
     }
 
     setIsUploading(true);
     try {
-      let finalMediaUrl = '';
+      let finalMediaUrl: string | null = null;
+      let finalMediaType: 'IMAGE' | 'VIDEO' | null = mediaType;
 
       if (mediaUri) {
-        // 1. Lấy presigned URL
-        const fileName = mediaUri.split('/').pop() || `upload_${Date.now()}`;
-        
-        // Mặc định cho type của file upload (tuỳ logic thực tế cần bóc tách kỹ hơn)
-        const contentType = mediaType === 'IMAGE' ? 'image/jpeg' : 'video/mp4'; 
-        // FileSize ở frontend (ReactNative) thường không có sẵn qua ImagePicker nếu ko request chi tiết. Mặc định gán dummy size hơp lệ, backend đã chặn theo stream.
-        const fileSize = 100000; 
-
-        // GỌI API THẬT
-        const uploadInfo = await socialService.requestUploadUrl(fileName, fileSize, contentType, mediaType);
-        
-        // 2. Put binary file lên storage = presigned URL
-        await socialService.uploadToStorage(uploadInfo.signedUrl, mediaUri, contentType);
+        const fileName = mediaUri.split('/').pop() || `post_${Date.now()}`;
+        const contentType = mediaType === 'VIDEO' ? 'video/mp4' : 'image/jpeg';
+        const uploadInfo = await socialService.uploadMedia(mediaUri, fileName, contentType);
         finalMediaUrl = uploadInfo.publicUrl;
+        finalMediaType = uploadInfo.mediaType;
       }
 
-      // 3. Tạo post record
-      await socialService.createPost(content.trim() || '', finalMediaUrl, mediaType);
+      await socialService.createPost(content.trim(), finalMediaUrl, finalMediaType);
 
-      // Hoàn tất
       setContent('');
       setMediaUri(null);
+      setMediaType(null);
       onPostCreated();
     } catch (error: any) {
       const errMsg = error.response?.data?.error || error.message || 'Không thể đăng bài viết lúc này.';
-      console.error('Lỗi khi đăng bài:', errMsg);
-      Alert.alert('Lỗi', errMsg);
+      console.error('Failed to create post:', errMsg);
+      Alert.alert('Chưa đăng được bài', errMsg);
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <Modal visible={visible} animationType="slide" onRequestClose={closeAndReset} presentationStyle="pageSheet">
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.headerBtn} disabled={isUploading}>
+            <TouchableOpacity onPress={closeAndReset} style={styles.headerBtn} disabled={isUploading}>
               <Text style={styles.cancelText}>Hủy</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Tạo bài viết</Text>
-            <TouchableOpacity 
-              onPress={handlePost} 
-              style={[styles.headerBtn, { alignItems: 'flex-end' }]}
+            <TouchableOpacity
+              onPress={handlePost}
+              style={[styles.postButton, (!content.trim() && !mediaUri) && styles.postButtonDisabled]}
               disabled={isUploading || (!content.trim() && !mediaUri)}
             >
-              {isUploading ? (
-                <ActivityIndicator size="small" color={Colors.light.primary} />
-              ) : (
-                <Text style={[styles.postText, (!content.trim() && !mediaUri) && { color: Colors.light.onSurfaceVariant }]}>Đăng</Text>
-              )}
+              {isUploading ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.postText}>Đăng</Text>}
             </TouchableOpacity>
           </View>
 
-          {/* Content Input */}
+          <View style={styles.authorRow}>
+            <UserAvatar
+              userId={user?.id || ''}
+              size={42}
+              prefetchData={{ avatarUrl: user?.avatarUrl, name: user?.fullName }}
+              containerStyle={styles.authorAvatar}
+            />
+            <View>
+              <Text style={styles.authorName}>{user?.fullName || 'Bạn'}</Text>
+              <Text style={styles.authorHint}>Chia sẻ điều hữu ích cho cộng đồng</Text>
+            </View>
+          </View>
+
           <View style={styles.contentArea}>
             <TextInput
               style={styles.input}
-              placeholder="Bạn muốn chia sẻ điều gì?"
+              placeholder="Bạn muốn chia sẻ điều gì hôm nay?"
               placeholderTextColor={Colors.light.onSurfaceVariant}
               multiline
               autoFocus
               value={content}
               onChangeText={setContent}
               editable={!isUploading}
+              maxLength={3000}
             />
 
             {mediaUri && (
               <View style={styles.mediaPreviewContainer}>
                 <Image source={{ uri: mediaUri }} style={styles.mediaPreview} />
-                <TouchableOpacity style={styles.removeMediaBtn} onPress={() => setMediaUri(null)}>
-                  <Ionicons name="close-circle" size={24} color="#FFF" />
+                {mediaType === 'VIDEO' && (
+                  <View style={styles.videoBadge}>
+                    <Ionicons name="play" size={18} color="#FFF" />
+                  </View>
+                )}
+                <TouchableOpacity style={styles.removeMediaBtn} onPress={() => setMediaUri(null)} disabled={isUploading}>
+                  <Ionicons name="close" size={18} color="#FFF" />
                 </TouchableOpacity>
               </View>
             )}
           </View>
 
-          {/* Bottom Tools */}
           <View style={styles.toolsRow}>
             <TouchableOpacity style={styles.toolBtn} onPress={pickMedia} disabled={isUploading}>
-              <Ionicons name="image" size={24} color={Colors.light.primary} />
+              <Ionicons name="image-outline" size={22} color={Colors.light.primary} />
               <Text style={styles.toolText}>Ảnh / Video</Text>
             </TouchableOpacity>
+            <Text style={styles.counterText}>{content.length}/3000</Text>
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -143,11 +177,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.outlineVariant,
   },
   headerBtn: {
-    width: 60,
+    width: 64,
   },
   cancelText: {
     fontFamily: 'Manrope',
@@ -157,14 +191,46 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: 'Manrope',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.light.onSurface,
+  },
+  postButton: {
+    width: 64,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.light.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postButtonDisabled: {
+    opacity: 0.45,
   },
   postText: {
     fontFamily: 'Manrope',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+  },
+  authorAvatar: {
+    marginRight: Spacing.sm,
+  },
+  authorName: {
+    fontFamily: 'Manrope',
     fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.light.primary,
+    fontWeight: '700',
+    color: Colors.light.onSurface,
+  },
+  authorHint: {
+    fontFamily: 'Manrope',
+    fontSize: 12,
+    color: Colors.light.onSurfaceVariant,
+    marginTop: 2,
   },
   contentArea: {
     flex: 1,
@@ -172,44 +238,70 @@ const styles = StyleSheet.create({
   },
   input: {
     fontFamily: 'Manrope',
-    fontSize: 18,
+    fontSize: 17,
     color: Colors.light.onSurface,
-    minHeight: 100,
+    minHeight: 120,
     textAlignVertical: 'top',
+    lineHeight: 24,
   },
   mediaPreviewContainer: {
     marginTop: Spacing.md,
     position: 'relative',
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
+    backgroundColor: Colors.light.surfaceContainerHighest,
   },
   mediaPreview: {
     width: '100%',
-    aspectRatio: 4/3,
-    backgroundColor: Colors.light.surfaceContainerHighest,
+    aspectRatio: 4 / 3,
+  },
+  videoBadge: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 54,
+    height: 54,
+    marginLeft: -27,
+    marginTop: -27,
+    borderRadius: 27,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   removeMediaBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   toolsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: Spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.light.outlineVariant,
   },
   toolBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingVertical: 8,
   },
   toolText: {
     fontFamily: 'Manrope',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: Colors.light.onSurface,
-  }
+  },
+  counterText: {
+    fontFamily: 'Manrope',
+    fontSize: 12,
+    color: Colors.light.onSurfaceVariant,
+  },
 });

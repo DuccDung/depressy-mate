@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
@@ -28,6 +28,7 @@ export const ChatDetailScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<ChatDetailRoute>();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const conversationId = route.params.conversationId;
 
   const listRef = useRef<FlatList<Message>>(null);
@@ -305,7 +306,7 @@ export const ChatDetailScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={Colors.light.onSurface} />
@@ -332,7 +333,11 @@ export const ChatDetailScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={styles.chatArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.chatArea}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         <FlatList
           ref={listRef}
           data={messages}
@@ -365,7 +370,7 @@ export const ChatDetailScreen: React.FC = () => {
           }}
         />
 
-        <View style={styles.composer}>
+        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}>
           <TextInput
             style={styles.input}
             placeholder="Nhập tin nhắn..."

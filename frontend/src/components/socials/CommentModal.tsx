@@ -1,25 +1,37 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, Modal, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
-import { socialService, Comment } from '../../services/socialService';
+import { Comment, socialService } from '../../services/socialService';
 import { UserAvatar } from './UserAvatar';
 
 interface CommentModalProps {
   visible: boolean;
   postId: string | null;
   onClose: () => void;
-  onCommentAdded: () => void; // Trigger để feed cập nhật comment_count
+  onCommentAdded: () => void;
 }
 
 export const CommentModal: React.FC<CommentModalProps> = ({ visible, postId, onClose, onCommentAdded }) => {
+  const insets = useSafeAreaInsets();
+  const inputRef = useRef<TextInput>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [replyTarget, setReplyTarget] = useState<Comment | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Lazy load states
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
@@ -28,8 +40,11 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, postId, onC
       setComments([]);
       setCursor(null);
       setHasMore(true);
+      setReplyTarget(null);
+      setInputText('');
       fetchComments();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, postId]);
 
   const fetchComments = async (currentCursor?: string | null) => {
@@ -40,14 +55,14 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, postId, onC
     try {
       const data = await socialService.getComments(postId, 15, currentCursor || undefined);
       if (currentCursor) {
-        setComments(prev => [...prev, ...data.data]);
+        setComments((previous) => [...previous, ...data.data]);
       } else {
         setComments(data.data);
       }
       setCursor(data.next_cursor);
       setHasMore(data.has_more);
     } catch (error) {
-      console.error('Lỗi lấy bình luận:', error);
+      console.error('Failed to fetch comments:', error);
     } finally {
       setLoading(false);
     }
@@ -58,40 +73,60 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, postId, onC
 
     setIsSubmitting(true);
     try {
-      // GIẢI THÍCH: GỌI API THẬT, NHẬN OBJECT CHUẨN TỪ DB SAU ĐÓ MỚI UPDATE STATE (KHÔNG CẬP NHẬT GIẢ)
-      const newComment = await socialService.createComment(postId, inputText);
-      setComments(prev => [newComment, ...prev]);
+      const newComment = await socialService.createComment(postId, inputText.trim(), replyTarget?.id);
+      if (replyTarget) {
+        setComments((previous) => addReplyToTree(previous, replyTarget.id, newComment));
+      } else {
+        setComments((previous) => [...previous, newComment]);
+      }
       setInputText('');
+      setReplyTarget(null);
       onCommentAdded();
     } catch (error) {
-      console.error('Lỗi khi comment:', error);
+      console.error('Failed to create comment:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleLikeComment = async (comment: Comment) => {
+    if (!postId) return;
+
+    try {
+      const result = await socialService.toggleCommentLike(postId, comment.id);
+      setComments((previous) => updateCommentInTree(previous, comment.id, (item) => ({
+        ...item,
+        is_liked: result.is_liked,
+        like_count: result.like_count,
+      })));
+    } catch (error) {
+      console.error('Failed to like comment:', error);
+    }
+  };
+
+  const startReply = (comment: Comment) => {
+    const target = comment.parent_comment_id
+      ? comments.find((root) => root.id === comment.parent_comment_id) || comment
+      : comment;
+    setReplyTarget(target);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
   const renderComment = ({ item }: { item: Comment }) => (
-    <View style={styles.commentRow}>
-      <UserAvatar 
-        userId={item.user_id} 
-        size={36} 
-        prefetchData={{ avatarUrl: item.author_avatar, name: item.author_name }} 
-        containerStyle={{ marginRight: Spacing.sm }}
-      />
-      <View style={styles.commentBubble}>
-        <Text style={styles.commentAuthor}>{item.author_name}</Text>
-        <Text style={styles.commentText}>{item.content}</Text>
-      </View>
-    </View>
+    <CommentThread
+      comment={item}
+      onLike={handleLikeComment}
+      onReply={startReply}
+    />
   );
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.container} edges={['top']}>
           <View style={styles.header}>
             <View style={{ width: 40 }} />
             <Text style={styles.headerTitle}>Bình luận</Text>
@@ -102,35 +137,44 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, postId, onC
 
           <FlatList
             data={comments}
-            keyExtractor={item => item.id}
+            keyExtractor={(item) => item.id}
             renderItem={renderComment}
             contentContainerStyle={styles.listContent}
             onEndReached={() => fetchComments(cursor)}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={loading ? <ActivityIndicator size="small" color={Colors.light.primary} style={{ marginVertical: 20 }} /> : null}
-            ListEmptyComponent={!loading ? <Text style={styles.emptyText}>Chưa có bình luận nào. Hãy là người đầu tiên!</Text> : null}
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={loading ? <ActivityIndicator size="small" color={Colors.light.primary} style={styles.footerLoader} /> : null}
+            ListEmptyComponent={!loading ? <Text style={styles.emptyText}>Chưa có bình luận nào. Hãy mở đầu câu chuyện.</Text> : null}
           />
 
-          <View style={styles.inputContainer}>
+          {replyTarget && (
+            <View style={styles.replyBanner}>
+              <Text style={styles.replyBannerText} numberOfLines={1}>
+                Đang trả lời {replyTarget.author_name}
+              </Text>
+              <TouchableOpacity onPress={() => setReplyTarget(null)}>
+                <Ionicons name="close" size={18} color={Colors.light.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}>
             <TextInput
+              ref={inputRef}
               style={styles.input}
-              placeholder="Viết bình luận..."
+              placeholder={replyTarget ? 'Viết trả lời...' : 'Viết bình luận...'}
               placeholderTextColor={Colors.light.onSurfaceVariant}
               value={inputText}
               onChangeText={setInputText}
               multiline
-              maxLength={500}
+              maxLength={1000}
             />
             <TouchableOpacity
-              style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]}
+              style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
               onPress={handlePostComment}
               disabled={!inputText.trim() || isSubmitting}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Ionicons name="send" size={18} color="#FFF" />
-              )}
+              {isSubmitting ? <ActivityIndicator size="small" color="#FFF" /> : <Ionicons name="send" size={18} color="#FFF" />}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -138,6 +182,98 @@ export const CommentModal: React.FC<CommentModalProps> = ({ visible, postId, onC
     </Modal>
   );
 };
+
+function CommentThread({
+  comment,
+  onLike,
+  onReply,
+}: {
+  comment: Comment;
+  onLike: (comment: Comment) => void;
+  onReply: (comment: Comment) => void;
+}) {
+  return (
+    <View style={styles.thread}>
+      <CommentRow comment={comment} onLike={onLike} onReply={onReply} />
+      {comment.replies?.length > 0 && (
+        <View style={styles.replies}>
+          {comment.replies.map((reply) => (
+            <CommentRow key={reply.id} comment={reply} onLike={onLike} onReply={onReply} compact />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CommentRow({
+  comment,
+  onLike,
+  onReply,
+  compact = false,
+}: {
+  comment: Comment;
+  onLike: (comment: Comment) => void;
+  onReply: (comment: Comment) => void;
+  compact?: boolean;
+}) {
+  return (
+    <View style={[styles.commentRow, compact && styles.replyRow]}>
+      <UserAvatar
+        userId={comment.user_id}
+        size={compact ? 30 : 36}
+        prefetchData={{ avatarUrl: comment.author_avatar, name: comment.author_name }}
+        containerStyle={styles.commentAvatar}
+      />
+      <View style={styles.commentBody}>
+        <View style={styles.commentBubble}>
+          <Text style={styles.commentAuthor}>{comment.author_name}</Text>
+          <Text style={styles.commentText}>{comment.content}</Text>
+        </View>
+        <View style={styles.commentActions}>
+          <TouchableOpacity onPress={() => onLike(comment)}>
+            <Text style={[styles.commentActionText, comment.is_liked && styles.commentLikedText]}>
+              {comment.is_liked ? 'Đã thích' : 'Thích'}{comment.like_count > 0 ? ` · ${comment.like_count}` : ''}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onReply(comment)}>
+            <Text style={styles.commentActionText}>Trả lời</Text>
+          </TouchableOpacity>
+          {comment.reply_count > 0 && !compact && (
+            <Text style={styles.commentMetaText}>{comment.reply_count} phản hồi</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function updateCommentInTree(
+  comments: Comment[],
+  commentId: string,
+  updater: (comment: Comment) => Comment,
+): Comment[] {
+  return comments.map((comment) => {
+    if (comment.id === commentId) return updater(comment);
+    return {
+      ...comment,
+      replies: updateCommentInTree(comment.replies || [], commentId, updater),
+    };
+  });
+}
+
+function addReplyToTree(comments: Comment[], rootCommentId: string, reply: Comment): Comment[] {
+  return comments.map((comment) => {
+    if (comment.id === rootCommentId) {
+      return {
+        ...comment,
+        reply_count: comment.reply_count + 1,
+        replies: [...(comment.replies || []), reply],
+      };
+    }
+    return comment;
+  });
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -149,13 +285,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.outlineVariant,
   },
   headerTitle: {
     fontFamily: 'Manrope',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.light.onSurface,
   },
   closeBtn: {
@@ -164,26 +300,41 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+  thread: {
+    marginBottom: Spacing.md,
   },
   commentRow: {
     flexDirection: 'row',
-    marginBottom: Spacing.md,
+    alignItems: 'flex-start',
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  replyRow: {
+    marginTop: Spacing.sm,
+  },
+  replies: {
+    marginLeft: 44,
+    marginTop: Spacing.xs,
+    paddingLeft: Spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: 'rgba(203, 195, 215, 0.45)',
+  },
+  commentAvatar: {
     marginRight: Spacing.sm,
   },
-  commentBubble: {
+  commentBody: {
     flex: 1,
+    minWidth: 0,
+  },
+  commentBubble: {
     backgroundColor: Colors.light.surfaceContainer,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 8,
   },
   commentAuthor: {
     fontFamily: 'Manrope',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 14,
     color: Colors.light.onSurface,
   },
@@ -194,25 +345,60 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 20,
   },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: Spacing.xl,
+  commentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    paddingTop: 6,
+  },
+  commentActionText: {
     fontFamily: 'Manrope',
+    fontSize: 12,
+    fontWeight: '700',
     color: Colors.light.onSurfaceVariant,
+  },
+  commentLikedText: {
+    color: '#E64B5D',
+  },
+  commentMetaText: {
+    fontFamily: 'Manrope',
+    fontSize: 12,
+    color: Colors.light.onSurfaceVariant,
+  },
+  replyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    backgroundColor: '#F2EDFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.light.outlineVariant,
+  },
+  replyBannerText: {
+    flex: 1,
+    fontFamily: 'Manrope',
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.primary,
+    marginRight: Spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: Spacing.md,
-    borderTopWidth: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.light.outlineVariant,
     alignItems: 'flex-end',
+    backgroundColor: Colors.light.surfaceContainerLowest,
   },
   input: {
     flex: 1,
-    backgroundColor: Colors.light.surfaceContainerHighest,
+    backgroundColor: Colors.light.surfaceContainer,
     borderRadius: BorderRadius.pill,
-    minHeight: 40,
-    maxHeight: 100,
+    minHeight: 42,
+    maxHeight: 110,
     paddingHorizontal: Spacing.md,
     paddingTop: 10,
     paddingBottom: 10,
@@ -220,12 +406,24 @@ const styles = StyleSheet.create({
     color: Colors.light.onSurface,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: Colors.light.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.sm,
-  }
+  },
+  sendBtnDisabled: {
+    opacity: 0.45,
+  },
+  footerLoader: {
+    marginVertical: 20,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: Spacing.xl,
+    fontFamily: 'Manrope',
+    color: Colors.light.onSurfaceVariant,
+  },
 });

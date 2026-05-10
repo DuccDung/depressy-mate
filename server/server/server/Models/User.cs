@@ -31,6 +31,8 @@ public partial class User
 
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
+    public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
+
     public virtual ICollection<ConversationParticipant> ConversationParticipants { get; set; } = new List<ConversationParticipant>();
 
     public virtual ICollection<Journal> Journals { get; set; } = new List<Journal>();
@@ -40,6 +42,8 @@ public partial class User
     public virtual ICollection<MoodCheckin> MoodCheckins { get; set; } = new List<MoodCheckin>();
 
     public virtual ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
+
+    public virtual ICollection<PostSave> PostSaves { get; set; } = new List<PostSave>();
 
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
 

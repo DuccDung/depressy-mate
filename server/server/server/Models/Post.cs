@@ -29,5 +29,7 @@ public partial class Post
 
     public virtual ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
 
+    public virtual ICollection<PostSave> PostSaves { get; set; } = new List<PostSave>();
+
     public virtual User User { get; set; } = null!;
 }

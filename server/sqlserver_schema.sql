@@ -4,6 +4,8 @@
 IF OBJECT_ID('dbo.messages', 'U') IS NOT NULL DROP TABLE dbo.messages;
 IF OBJECT_ID('dbo.conversation_participants', 'U') IS NOT NULL DROP TABLE dbo.conversation_participants;
 IF OBJECT_ID('dbo.conversations', 'U') IS NOT NULL DROP TABLE dbo.conversations;
+IF OBJECT_ID('dbo.comment_likes', 'U') IS NOT NULL DROP TABLE dbo.comment_likes;
+IF OBJECT_ID('dbo.post_saves', 'U') IS NOT NULL DROP TABLE dbo.post_saves;
 IF OBJECT_ID('dbo.comments', 'U') IS NOT NULL DROP TABLE dbo.comments;
 IF OBJECT_ID('dbo.post_likes', 'U') IS NOT NULL DROP TABLE dbo.post_likes;
 IF OBJECT_ID('dbo.posts', 'U') IS NOT NULL DROP TABLE dbo.posts;
@@ -147,10 +149,40 @@ CREATE TABLE dbo.comments (
     id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_comments PRIMARY KEY DEFAULT NEWID(),
     post_id UNIQUEIDENTIFIER NOT NULL,
     user_id UNIQUEIDENTIFIER NOT NULL,
+    parent_comment_id UNIQUEIDENTIFIER NULL,
     content NVARCHAR(MAX) NOT NULL,
+    like_count INT NOT NULL CONSTRAINT DF_comments_like_count DEFAULT 0,
+    reply_count INT NOT NULL CONSTRAINT DF_comments_reply_count DEFAULT 0,
     created_at DATETIME2(3) NOT NULL CONSTRAINT DF_comments_created_at DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2(3) NOT NULL CONSTRAINT DF_comments_updated_at DEFAULT SYSUTCDATETIME(),
+    deleted_at DATETIME2(3) NULL,
     CONSTRAINT FK_comments_posts FOREIGN KEY (post_id) REFERENCES dbo.posts(id) ON DELETE CASCADE,
-    CONSTRAINT FK_comments_users FOREIGN KEY (user_id) REFERENCES dbo.users(id)
+    CONSTRAINT FK_comments_users FOREIGN KEY (user_id) REFERENCES dbo.users(id),
+    CONSTRAINT FK_comments_parent FOREIGN KEY (parent_comment_id) REFERENCES dbo.comments(id),
+    CONSTRAINT CK_comments_like_count CHECK (like_count >= 0),
+    CONSTRAINT CK_comments_reply_count CHECK (reply_count >= 0)
+);
+GO
+
+CREATE TABLE dbo.comment_likes (
+    id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_comment_likes PRIMARY KEY DEFAULT NEWID(),
+    comment_id UNIQUEIDENTIFIER NOT NULL,
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    created_at DATETIME2(3) NOT NULL CONSTRAINT DF_comment_likes_created_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_comment_likes_comments FOREIGN KEY (comment_id) REFERENCES dbo.comments(id) ON DELETE CASCADE,
+    CONSTRAINT FK_comment_likes_users FOREIGN KEY (user_id) REFERENCES dbo.users(id),
+    CONSTRAINT UQ_comment_likes_comment_user UNIQUE (comment_id, user_id)
+);
+GO
+
+CREATE TABLE dbo.post_saves (
+    id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_post_saves PRIMARY KEY DEFAULT NEWID(),
+    post_id UNIQUEIDENTIFIER NOT NULL,
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    created_at DATETIME2(3) NOT NULL CONSTRAINT DF_post_saves_created_at DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_post_saves_posts FOREIGN KEY (post_id) REFERENCES dbo.posts(id) ON DELETE CASCADE,
+    CONSTRAINT FK_post_saves_users FOREIGN KEY (user_id) REFERENCES dbo.users(id),
+    CONSTRAINT UQ_post_saves_post_user UNIQUE (post_id, user_id)
 );
 GO
 
@@ -204,7 +236,8 @@ CREATE INDEX IX_mood_checkins_user_created ON dbo.mood_checkins(user_id, created
 CREATE INDEX IX_journals_user_created ON dbo.journals(user_id, created_at DESC);
 CREATE INDEX IX_posts_created_active ON dbo.posts(created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX IX_posts_user_created ON dbo.posts(user_id, created_at DESC);
-CREATE INDEX IX_comments_post_created ON dbo.comments(post_id, created_at DESC);
+CREATE INDEX IX_comments_post_parent_created ON dbo.comments(post_id, parent_comment_id, created_at DESC);
+CREATE INDEX IX_post_saves_user_created ON dbo.post_saves(user_id, created_at DESC);
 CREATE INDEX IX_conversations_updated ON dbo.conversations(updated_at DESC);
 CREATE INDEX IX_conversation_participants_user ON dbo.conversation_participants(user_id);
 CREATE INDEX IX_messages_conversation_created ON dbo.messages(conversation_id, created_at DESC);
