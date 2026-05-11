@@ -83,7 +83,7 @@ public class HealthApiController : ControllerBase
     public async Task<IActionResult> Summary([FromQuery] int days = 30, CancellationToken cancellationToken = default)
     {
         var currentUserId = ChatService.GetUserId(User);
-        var safeDays = Math.Clamp(days, 7, 180);
+        var safeDays = Math.Clamp(days, 7, 365);
         var from = DateTime.UtcNow.Date.AddDays(-(safeDays - 1));
 
         var assessments = await _context.AssessmentResults

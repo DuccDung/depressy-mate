@@ -97,6 +97,98 @@ public class PushNotificationService
         }
     }
 
+    public Task SendConversationCreatedNotificationAsync(
+        ConversationDto conversation,
+        Guid actorUserId,
+        IReadOnlyCollection<Guid> recipientUserIds,
+        CancellationToken cancellationToken)
+    {
+        var actorName = GetParticipantName(conversation, actorUserId) ?? "Depressy Mate";
+        var isGroup = string.Equals(conversation.Type, "GROUP", StringComparison.OrdinalIgnoreCase);
+        var title = isGroup ? conversation.DisplayName : actorName;
+        var body = isGroup
+            ? $"{actorName} đã thêm bạn vào nhóm."
+            : $"{actorName} đã bắt đầu cuộc trò chuyện với bạn.";
+
+        return SendConversationEventNotificationAsync(
+            conversation.Id,
+            actorUserId,
+            recipientUserIds,
+            "conversation_created",
+            title,
+            body,
+            cancellationToken);
+    }
+
+    public Task SendGroupMembersAddedNotificationAsync(
+        ConversationDto conversation,
+        Guid actorUserId,
+        IReadOnlyCollection<Guid> recipientUserIds,
+        CancellationToken cancellationToken)
+    {
+        var actorName = GetParticipantName(conversation, actorUserId) ?? "Một thành viên";
+        return SendConversationEventNotificationAsync(
+            conversation.Id,
+            actorUserId,
+            recipientUserIds,
+            "group_members_added",
+            conversation.DisplayName,
+            $"{actorName} đã thêm bạn vào nhóm.",
+            cancellationToken);
+    }
+
+    public Task SendConversationUpdatedNotificationAsync(
+        ConversationDto conversation,
+        Guid actorUserId,
+        IReadOnlyCollection<Guid> recipientUserIds,
+        CancellationToken cancellationToken)
+    {
+        var actorName = GetParticipantName(conversation, actorUserId) ?? "Một thành viên";
+        return SendConversationEventNotificationAsync(
+            conversation.Id,
+            actorUserId,
+            recipientUserIds,
+            "conversation_updated",
+            conversation.DisplayName,
+            $"{actorName} đã cập nhật thông tin nhóm.",
+            cancellationToken);
+    }
+
+    public Task SendConversationRemovedNotificationAsync(
+        Guid conversationId,
+        string conversationName,
+        Guid actorUserId,
+        IReadOnlyCollection<Guid> recipientUserIds,
+        string body,
+        CancellationToken cancellationToken)
+    {
+        return SendConversationEventNotificationAsync(
+            conversationId,
+            actorUserId,
+            recipientUserIds,
+            "conversation_removed",
+            conversationName,
+            body,
+            cancellationToken);
+    }
+
+    public Task SendGroupMemberLeftNotificationAsync(
+        ConversationDto conversation,
+        Guid actorUserId,
+        IReadOnlyCollection<Guid> recipientUserIds,
+        CancellationToken cancellationToken)
+    {
+        var actorName = GetParticipantName(conversation, actorUserId) ?? "Một thành viên";
+        return SendConversationEventNotificationAsync(
+            conversation.Id,
+            actorUserId,
+            recipientUserIds,
+            "group_member_left",
+            conversation.DisplayName,
+            $"{actorName} đã rời nhóm.",
+            cancellationToken);
+    }
+
     public async Task<PushNotificationSendResult> SendAdminNotificationAsync(
         string title,
         string body,
@@ -182,6 +274,66 @@ public class PushNotificationService
         }
 
         return result;
+    }
+
+    private async Task SendConversationEventNotificationAsync(
+        Guid conversationId,
+        Guid actorUserId,
+        IReadOnlyCollection<Guid> recipientUserIds,
+        string eventName,
+        string title,
+        string body,
+        CancellationToken cancellationToken)
+    {
+        var messaging = _messaging.Value;
+        if (messaging is null)
+        {
+            return;
+        }
+
+        var targetUserIds = recipientUserIds
+            .Where(userId => userId != Guid.Empty && userId != actorUserId)
+            .Distinct()
+            .ToList();
+
+        if (targetUserIds.Count == 0)
+        {
+            return;
+        }
+
+        var tokens = await _context.UserPushTokens
+            .AsNoTracking()
+            .Where(token =>
+                targetUserIds.Contains(token.UserId) &&
+                token.Provider == "firebase" &&
+                token.IsActive &&
+                token.PushToken != null)
+            .Select(token => token.PushToken!)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        if (tokens.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var batch in tokens.Chunk(FcmBatchSize))
+        {
+            await SendBatchAsync(
+                messaging,
+                batch.ToList(),
+                NormalizeNotificationTitle(title),
+                TrimNotificationBody(body),
+                new Dictionary<string, string>
+                {
+                    ["type"] = "conversation_event",
+                    ["event"] = eventName,
+                    ["conversationId"] = conversationId.ToString(),
+                    ["actorId"] = actorUserId.ToString()
+                },
+                $"conversation {eventName} notification",
+                cancellationToken);
+        }
     }
 
     private async Task<PushNotificationBatchResult> SendBatchAsync(
@@ -327,6 +479,13 @@ public class PushNotificationService
     {
         var normalized = string.IsNullOrWhiteSpace(title) ? "Depressy Mate" : title.Trim();
         return normalized.Length <= 80 ? normalized : normalized[..80];
+    }
+
+    private static string? GetParticipantName(ConversationDto conversation, Guid userId)
+    {
+        return conversation.Participants
+            .FirstOrDefault(participant => participant.UserId == userId)
+            ?.FullName;
     }
 }
 

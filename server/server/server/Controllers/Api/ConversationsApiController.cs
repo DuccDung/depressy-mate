@@ -62,6 +62,11 @@ public class ConversationsApiController : ControllerBase
             if (!result.Existing)
             {
                 await NotifyConversationCreatedAsync(result.Conversation.Id, result.Conversation.Participants.Select(item => item.UserId), cancellationToken);
+                await _pushNotificationService.SendConversationCreatedNotificationAsync(
+                    result.Conversation,
+                    currentUserId,
+                    result.Conversation.Participants.Select(item => item.UserId).ToList(),
+                    cancellationToken);
             }
 
             return result.Existing
@@ -82,6 +87,11 @@ public class ConversationsApiController : ControllerBase
             var currentUserId = ChatService.GetUserId(User);
             var result = await _chatService.CreateGroupConversationAsync(currentUserId, request, cancellationToken);
             await NotifyConversationCreatedAsync(result.Conversation.Id, result.Conversation.Participants.Select(item => item.UserId), cancellationToken);
+            await _pushNotificationService.SendConversationCreatedNotificationAsync(
+                result.Conversation,
+                currentUserId,
+                result.Conversation.Participants.Select(item => item.UserId).ToList(),
+                cancellationToken);
             return Created($"/api/conversations/{result.Id}", result);
         }
         catch (ChatOperationException exception)
@@ -165,6 +175,11 @@ public class ConversationsApiController : ControllerBase
             var currentUserId = ChatService.GetUserId(User);
             var conversation = await _chatService.UpdateGroupAsync(currentUserId, id, request, cancellationToken);
             await NotifyConversationUpdatedAsync(id, cancellationToken);
+            await _pushNotificationService.SendConversationUpdatedNotificationAsync(
+                conversation,
+                currentUserId,
+                conversation.Participants.Select(item => item.UserId).ToList(),
+                cancellationToken);
             return Ok(conversation);
         }
         catch (ChatOperationException exception)
@@ -179,8 +194,18 @@ public class ConversationsApiController : ControllerBase
         try
         {
             var currentUserId = ChatService.GetUserId(User);
+            var participantIdsBeforeAdd = await _chatService.GetActiveParticipantIdsAsync(id, cancellationToken);
             var conversation = await _chatService.AddMembersAsync(currentUserId, id, request, cancellationToken);
             await NotifyConversationCreatedAsync(id, conversation.Participants.Select(item => item.UserId), cancellationToken);
+            var addedUserIds = conversation.Participants
+                .Select(item => item.UserId)
+                .Except(participantIdsBeforeAdd)
+                .ToList();
+            await _pushNotificationService.SendGroupMembersAddedNotificationAsync(
+                conversation,
+                currentUserId,
+                addedUserIds,
+                cancellationToken);
             return Ok(conversation);
         }
         catch (ChatOperationException exception)
@@ -195,10 +220,27 @@ public class ConversationsApiController : ControllerBase
         try
         {
             var currentUserId = ChatService.GetUserId(User);
+            var conversationBeforeRemoval = await _chatService.GetConversationAsync(id, currentUserId, cancellationToken);
             var conversation = await _chatService.RemoveMemberAsync(currentUserId, id, memberId, cancellationToken);
             await NotifyConversationUpdatedAsync(id, cancellationToken);
+            await _pushNotificationService.SendConversationUpdatedNotificationAsync(
+                conversation,
+                currentUserId,
+                conversation.Participants.Select(item => item.UserId).ToList(),
+                cancellationToken);
             await _hubContext.Clients.Group(ChatGroups.User(memberId))
                 .SendAsync("conversation:removed", new { conversation_id = id }, cancellationToken);
+            if (conversationBeforeRemoval is not null)
+            {
+                var actorName = GetParticipantName(conversationBeforeRemoval, currentUserId);
+                await _pushNotificationService.SendConversationRemovedNotificationAsync(
+                    id,
+                    conversationBeforeRemoval.DisplayName,
+                    currentUserId,
+                    new[] { memberId },
+                    $"{actorName} đã xóa bạn khỏi nhóm.",
+                    cancellationToken);
+            }
             return Ok(conversation);
         }
         catch (ChatOperationException exception)
@@ -213,10 +255,20 @@ public class ConversationsApiController : ControllerBase
         try
         {
             var currentUserId = ChatService.GetUserId(User);
+            var conversationBeforeLeave = await _chatService.GetConversationAsync(id, currentUserId, cancellationToken);
+            var participantIdsBeforeLeave = await _chatService.GetActiveParticipantIdsAsync(id, cancellationToken);
             await _chatService.LeaveGroupAsync(currentUserId, id, cancellationToken);
             await NotifyConversationUpdatedAsync(id, cancellationToken);
             await _hubContext.Clients.Group(ChatGroups.User(currentUserId))
                 .SendAsync("conversation:removed", new { conversation_id = id }, cancellationToken);
+            if (conversationBeforeLeave is not null)
+            {
+                await _pushNotificationService.SendGroupMemberLeftNotificationAsync(
+                    conversationBeforeLeave,
+                    currentUserId,
+                    participantIdsBeforeLeave,
+                    cancellationToken);
+            }
             return Ok(new { conversation_id = id, left = true });
         }
         catch (ChatOperationException exception)
@@ -270,6 +322,13 @@ public class ConversationsApiController : ControllerBase
             out var parsedCursor)
             ? parsedCursor
             : null;
+    }
+
+    private static string GetParticipantName(ConversationDto conversation, Guid userId)
+    {
+        return conversation.Participants
+            .FirstOrDefault(participant => participant.UserId == userId)
+            ?.FullName ?? "Một thành viên";
     }
 
     private IActionResult ToErrorResult(ChatOperationException exception)

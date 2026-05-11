@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
-import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
+import { Spacing, BorderRadius, Shadows } from '../../constants/theme';
 import { getFacebookAccessToken } from '../services/facebookAuth';
 import { getGoogleIdToken } from '../services/googleAuth';
 
@@ -37,15 +37,15 @@ type LoginErrors = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const THEME_COLORS = {
-  background: '#F3F0FF',
-  primary: '#7B61FF',
-  text: '#191C1E',
-  secondaryText: '#494454',
-  divider: '#E0E0E0',
+  background: '#FAF8F2',
+  primary: '#1D6B63',
+  text: '#111817',
+  secondaryText: '#65736F',
+  divider: '#DDE7E4',
   cardBg: '#FFFFFF',
-  danger: '#D92D20',
-  mutedBg: '#F9F9FF',
-  border: '#E8E8FF',
+  danger: '#A33A3A',
+  mutedBg: '#F7FAF8',
+  border: '#DCE7E4',
 };
 
 const getApiErrorMessage = (error: any, fallback: string) => {
@@ -146,28 +146,16 @@ export default function LoginScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <View style={styles.brandContainer}>
-              <Image
-                source={require('../../assets/images/brand_logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-              <Text style={styles.appName}>Depressy Mate</Text>
-            </View>
-            <Text style={styles.slogan}>Lắng nghe tâm trí, thấu hiểu chính mình</Text>
-          </View>
-
           <View style={[styles.card, Shadows.ambient]}>
-            <Text style={styles.cardTitle}>Đăng nhập</Text>
-            <Text style={styles.cardSubtitle}>Chào mừng bạn quay lại.</Text>
+            <AuthBrandHeader />
 
+            <Text style={styles.fieldLabel}>Email</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
               <Ionicons name="mail-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Email của bạn"
-                placeholderTextColor="#9CA3AF"
+                placeholder="ban@example.com"
+                placeholderTextColor="#8B9693"
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
@@ -184,12 +172,13 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
+            <Text style={styles.fieldLabel}>Mật khẩu</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
               <Ionicons name="lock-closed-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Mật khẩu"
-                placeholderTextColor="#9CA3AF"
+                placeholder="Nhập mật khẩu"
+                placeholderTextColor="#8B9693"
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
@@ -228,7 +217,7 @@ export default function LoginScreen({ navigation }: Props) {
 
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Hoặc</Text>
+              <Text style={styles.dividerText}>Hoặc tiếp tục với</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -260,6 +249,24 @@ export default function LoginScreen({ navigation }: Props) {
   );
 }
 
+function AuthBrandHeader() {
+  return (
+    <View style={styles.authBrand}>
+      <View style={styles.logoBadge}>
+        <Image
+          source={require('../../assets/images/brand_logo.png')}
+          style={styles.logo}
+          resizeMode="cover"
+        />
+      </View>
+      <View style={styles.brandTextBlock}>
+        <Text style={styles.appName}>Depressy Mate</Text>
+        <Text style={styles.brandCaption}>Bắt đầu nhẹ nhàng, theo dõi rõ ràng</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -271,55 +278,62 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xxl,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xl,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 36,
-  },
-  brandContainer: {
+  authBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.xl,
+  },
+  logoBadge: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#F7FAF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(29,107,99,0.16)',
+    overflow: 'hidden',
   },
   logo: {
-    width: 48,
-    height: 48,
-    marginRight: 12,
+    width: 64,
+    height: 64,
+  },
+  brandTextBlock: {
+    flex: 1,
+    marginLeft: Spacing.md,
   },
   appName: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: Colors.light.primary,
+    fontSize: 27,
+    fontWeight: '900',
+    color: THEME_COLORS.primary,
     fontFamily: 'Manrope',
     includeFontPadding: false,
+    lineHeight: 34,
   },
-  slogan: {
-    fontSize: 15,
+  brandCaption: {
+    fontSize: 11,
+    fontWeight: '800',
     color: THEME_COLORS.secondaryText,
     fontFamily: 'Manrope',
-    textAlign: 'center',
+    marginTop: 2,
   },
   card: {
     backgroundColor: THEME_COLORS.cardBg,
-    borderRadius: 28,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     width: '100%',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20,78,73,0.12)',
   },
-  cardTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: THEME_COLORS.text,
-    textAlign: 'center',
-    fontFamily: 'Manrope',
-  },
-  cardSubtitle: {
-    color: THEME_COLORS.secondaryText,
-    fontSize: 14,
-    marginTop: 6,
-    marginBottom: Spacing.lg,
-    textAlign: 'center',
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#394541',
+    marginTop: Spacing.sm,
+    marginBottom: 7,
     fontFamily: 'Manrope',
   },
   inputWrapper: {
@@ -329,7 +343,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: THEME_COLORS.border,
-    marginTop: Spacing.sm,
     paddingHorizontal: 16,
     height: 56,
   },
@@ -381,8 +394,9 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     marginHorizontal: 12,
-    color: '#8F8A99',
-    fontSize: 14,
+    color: '#73807C',
+    fontSize: 12,
+    fontWeight: '800',
     fontFamily: 'Manrope',
   },
   socialRow: {
@@ -400,6 +414,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     backgroundColor: '#FFFFFF',
     paddingVertical: 13,
+    minHeight: 48,
   },
   socialButtonText: {
     color: THEME_COLORS.text,

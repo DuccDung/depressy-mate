@@ -330,7 +330,7 @@ function MetricSmoothLineChart({
 }: {
   title: string;
   subtitle: string;
-  data: Array<DailyHealthPoint & { activity_minutes?: number }>;
+  data: (DailyHealthPoint & { activity_minutes?: number })[];
   valueKey: keyof (DailyHealthPoint & { activity_minutes?: number });
   maxValue: number;
   color: string;
@@ -401,16 +401,23 @@ function MetricSmoothLineChart({
 }
 
 function hasChartData(
-  data: Array<DailyHealthPoint & { activity_minutes?: number }>,
+  data: (DailyHealthPoint & { activity_minutes?: number })[],
   valueKey: keyof (DailyHealthPoint & { activity_minutes?: number }),
 ) {
-  return data.some((item) => {
-    const value = Number(item[valueKey]);
-    return Number.isFinite(value) && value > 0;
-  });
+  const validPointCount = data.filter((item) => {
+    const rawValue = item[valueKey];
+    if (rawValue === null || rawValue === undefined) return false;
+
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return false;
+
+    return valueKey === 'assessment_severity' ? value >= 0 : value > 0;
+  }).length;
+
+  return validPointCount >= 2;
 }
 
-function buildSmoothPath(points: Array<{ x: number; y: number }>) {
+function buildSmoothPath(points: { x: number; y: number }[]) {
   if (points.length === 0) return '';
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 

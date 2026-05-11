@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius, Typography } from '../../constants/theme';
+import { BorderRadius, Spacing, Typography } from '../../constants/theme';
 
 interface SearchFilterBarProps {
   searchQuery: string;
@@ -14,27 +14,27 @@ export default function SearchFilterBar({
   searchQuery,
   onSearchChange,
   onFilterPress,
-  placeholder = "Tìm kiếm...",
+  placeholder = 'Tìm kiếm...',
 }: SearchFilterBarProps) {
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>
-        <Feather name="search" size={20} color={Colors.light.onSurfaceVariant} style={styles.icon} />
+        <Feather name="search" size={19} color="#55736E" style={styles.icon} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor={Colors.light.onSurfaceVariant}
+          placeholderTextColor="#7D8986"
           value={searchQuery}
           onChangeText={onSearchChange}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => onSearchChange('')} style={styles.clearButton}>
-            <Feather name="x-circle" size={18} color={Colors.light.onSurfaceVariant} />
+            <Feather name="x-circle" size={18} color="#55736E" />
           </TouchableOpacity>
         )}
       </View>
-      <TouchableOpacity style={styles.filterButton} onPress={onFilterPress}>
-        <Feather name="sliders" size={20} color={Colors.light.primary} />
+      <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.84}>
+        <Feather name="sliders" size={20} color="#1D6B63" />
       </TouchableOpacity>
     </View>
   );
@@ -50,12 +50,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.surfaceContainerLowest,
+    backgroundColor: '#FFFFFF',
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.md,
-    height: 48,
-    borderWidth: 1,
-    borderColor: Colors.light.surfaceContainerHigh,
+    height: 50,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20,78,73,0.14)',
   },
   icon: {
     marginRight: Spacing.sm,
@@ -64,21 +64,21 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontFamily: Typography.fontFamily,
-    fontSize: Typography.sizes.body,
-    color: Colors.light.onSurface,
+    fontSize: 14,
+    color: '#111817',
   },
   clearButton: {
     padding: 4,
   },
   filterButton: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.light.surfaceContainerLowest,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.light.surfaceContainerHigh,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20,78,73,0.14)',
   },
 });

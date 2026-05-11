@@ -22,15 +22,30 @@ import { Colors, Spacing, BorderRadius } from '../../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { Post, socialService } from '../services/socialService';
 import { profileService, ProfileDetails } from '../services/profileService';
+import { DailyHealthPoint, healthService, HealthSummary } from '../services/healthService';
 import { PostCard } from '../components/socials/PostCard';
 import { CommentModal } from '../components/socials/CommentModal';
 
 type ProfileTab = 'overview' | 'posts' | 'saved';
+type HealthRangeKey = 'week' | 'month' | 'year';
+type HealthChartPoint = { date: string; label: string; value: number | null };
+type ProfileHealthChart = {
+  key: string;
+  title: string;
+  subtitle: string;
+  color: string;
+  maxValue: number;
+  data: HealthChartPoint[];
+  reverseGood?: boolean;
+  valueSuffix?: string;
+  allowZero?: boolean;
+};
 
-const moodData = [42, 48, 45, 58, 54, 66, 72];
-const sleepData = [60, 62, 55, 70, 68, 76, 73];
-const stressData = [76, 70, 74, 61, 58, 50, 43];
-const chartLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const healthRangeOptions: { key: HealthRangeKey; label: string; days: number }[] = [
+  { key: 'week', label: 'Tuần', days: 7 },
+  { key: 'month', label: 'Tháng', days: 30 },
+  { key: 'year', label: 'Năm', days: 365 },
+];
 
 const getAvatarUri = (avatarUrl?: string | null, name?: string | null) => {
   if (avatarUrl && avatarUrl.trim()) return avatarUrl;
@@ -67,6 +82,9 @@ export default function ProfileScreen() {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [healthSummary, setHealthSummary] = useState<HealthSummary | null>(null);
+  const [healthRange, setHealthRange] = useState<HealthRangeKey>('week');
+  const [loadingHealth, setLoadingHealth] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [verifyEmailVisible, setVerifyEmailVisible] = useState(false);
@@ -77,6 +95,8 @@ export default function ProfileScreen() {
   const hideEmail = facebookAccount || isFacebookPlaceholderEmail(displayProfile?.email);
   const myPostCount = posts.length;
   const savedCount = savedPosts.length;
+  const selectedHealthRange = healthRangeOptions.find((item) => item.key === healthRange) || healthRangeOptions[0];
+  const healthCharts = buildProfileHealthCharts(healthSummary?.daily || [], healthRange);
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
@@ -118,14 +138,30 @@ export default function ProfileScreen() {
     }
   }, [user?.id]);
 
+  const loadHealthSummary = useCallback(async () => {
+    setLoadingHealth(true);
+    try {
+      const data = await healthService.getSummary(selectedHealthRange.days);
+      setHealthSummary(data);
+    } catch (error) {
+      console.error('Failed to load profile health summary:', error);
+    } finally {
+      setLoadingHealth(false);
+    }
+  }, [selectedHealthRange.days]);
+
   useEffect(() => {
     loadProfile();
     loadPosts();
   }, [loadProfile, loadPosts]);
 
+  useEffect(() => {
+    loadHealthSummary();
+  }, [loadHealthSummary]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadProfile(), loadPosts()]);
+    await Promise.all([loadProfile(), loadPosts(), loadHealthSummary()]);
     setRefreshing(false);
   };
 
@@ -241,12 +277,43 @@ export default function ProfileScreen() {
 
             <View style={styles.chartPanel}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Sức khỏe tuần này</Text>
-                <Text style={styles.mockLabel}>Dữ liệu mẫu</Text>
+                <Text style={styles.sectionTitle}>{getHealthRangeTitle(healthRange)}</Text>
+                <Text style={styles.rangeLabel}>{selectedHealthRange.label}</Text>
               </View>
-              <HealthLineChart title="Tâm trạng" color="#1D6B63" data={moodData} />
-              <HealthLineChart title="Giấc ngủ" color="#7350A6" data={sleepData} />
-              <HealthLineChart title="Căng thẳng" color="#D77948" data={stressData} reverseGood />
+
+              <View style={styles.rangeTabs}>
+                {healthRangeOptions.map((item) => (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[styles.rangeTab, healthRange === item.key && styles.rangeTabActive]}
+                    onPress={() => setHealthRange(item.key)}
+                    activeOpacity={0.84}
+                  >
+                    <Text style={[styles.rangeTabText, healthRange === item.key && styles.rangeTabTextActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {loadingHealth && !healthSummary ? (
+                <ActivityIndicator color={Colors.light.primary} style={styles.loader} />
+              ) : healthCharts.length === 0 ? (
+                <Text style={styles.chartEmptyText}>Chưa đủ dữ liệu để hiển thị biểu đồ đẹp. Hãy check-in hoặc lưu thêm hoạt động trong khoảng thời gian này.</Text>
+              ) : (
+                healthCharts.map((chart) => (
+                  <HealthLineChart
+                    key={chart.key}
+                    title={chart.title}
+                    subtitle={chart.subtitle}
+                    color={chart.color}
+                    data={chart.data}
+                    maxValue={chart.maxValue}
+                    reverseGood={chart.reverseGood}
+                    valueSuffix={chart.valueSuffix}
+                  />
+                ))
+              )}
             </View>
           </>
         ) : (
@@ -335,46 +402,184 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
   );
 }
 
-function HealthLineChart({ title, data, color, reverseGood }: { title: string; data: number[]; color: string; reverseGood?: boolean }) {
+function HealthLineChart({
+  title,
+  subtitle,
+  data,
+  maxValue,
+  color,
+  reverseGood,
+  valueSuffix = '',
+}: {
+  title: string;
+  subtitle: string;
+  data: HealthChartPoint[];
+  maxValue: number;
+  color: string;
+  reverseGood?: boolean;
+  valueSuffix?: string;
+}) {
   const width = 280;
   const height = 96;
   const padding = 12;
-  const points = data.map((value, index) => {
-    const x = padding + (index * (width - padding * 2)) / (data.length - 1);
-    const y = padding + ((100 - value) * (height - padding * 2)) / 100;
-    return { x, y, value };
+  const safeMax = Math.max(maxValue, 1);
+  const points = data.map((item, index) => {
+    const x = padding + (index * (width - padding * 2)) / Math.max(1, data.length - 1);
+    const normalized = item.value === null ? 0 : Math.min(Math.max(item.value / safeMax, 0), 1);
+    const y = padding + (1 - normalized) * (height - padding * 2);
+    return { x, y, value: item.value };
   });
-  const path = buildSmoothPath(points);
-  const latest = data[data.length - 1];
-  const trend = latest - data[0];
-  const trendText = reverseGood
-    ? trend <= 0 ? 'Đang giảm' : 'Cần chú ý'
-    : trend >= 0 ? 'Đang tốt lên' : 'Cần chú ý';
+  const validPoints = points.filter((point): point is { x: number; y: number; value: number } => point.value !== null);
+  const path = buildSmoothPath(validPoints);
+  const latest = validPoints[validPoints.length - 1]?.value ?? null;
+  const first = validPoints[0]?.value ?? null;
+  const trend = latest !== null && first !== null ? latest - first : 0;
+  const trendText = Math.abs(trend) < 0.1
+    ? 'Ổn định'
+    : reverseGood
+      ? trend <= 0 ? 'Đang giảm' : 'Cần chú ý'
+      : trend >= 0 ? 'Đang tốt lên' : 'Cần chú ý';
+  const labelStep = Math.ceil(Math.max(1, data.length / 6));
+  const labels = data.filter((_, index) => index % labelStep === 0 || index === data.length - 1);
 
   return (
     <View style={styles.chartItem}>
       <View style={styles.chartTop}>
-        <View>
+        <View style={styles.chartTitleBlock}>
           <Text style={styles.chartTitle}>{title}</Text>
-          <Text style={styles.chartTrend}>{trendText}</Text>
+          <Text style={styles.chartTrend}>{subtitle} · {trendText}</Text>
         </View>
-        <Text style={[styles.chartScore, { color }]}>{latest}</Text>
+        <Text style={[styles.chartScore, { color }]}>
+          {latest === null ? '--' : formatMetricValue(latest, valueSuffix)}
+        </Text>
       </View>
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Path d={`${path} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`} fill={color} opacity={0.08} />
-        <Path d={path} stroke={color} strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((point, index) => (
-          <Circle key={`${title}-${index}`} cx={point.x} cy={point.y} r={index === points.length - 1 ? 4.2 : 3.2} fill="#FFF" stroke={color} strokeWidth={2} />
+        {path ? (
+          <Path
+            d={`${path} L ${validPoints[validPoints.length - 1].x} ${height - padding} L ${validPoints[0].x} ${height - padding} Z`}
+            fill={color}
+            opacity={0.08}
+          />
+        ) : null}
+        {path ? <Path d={path} stroke={color} strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" /> : null}
+        {validPoints.map((point, index) => (
+          <Circle key={`${title}-${index}`} cx={point.x} cy={point.y} r={index === validPoints.length - 1 ? 4.2 : 3.2} fill="#FFF" stroke={color} strokeWidth={2} />
         ))}
       </Svg>
       <View style={styles.chartLabels}>
-        {chartLabels.map((label) => <Text key={label} style={styles.chartLabel}>{label}</Text>)}
+        {labels.map((item, index) => <Text key={`${title}-${item.date}-${index}`} style={styles.chartLabel}>{item.label}</Text>)}
       </View>
     </View>
   );
 }
 
-function buildSmoothPath(points: Array<{ x: number; y: number }>) {
+function buildProfileHealthCharts(daily: DailyHealthPoint[], range: HealthRangeKey): ProfileHealthChart[] {
+  const moodPoints = toHealthChartPoints(daily, range, (item) => item.mood_score);
+  const assessmentPoints = toHealthChartPoints(daily, range, (item) => item.assessment_severity);
+  const sleepPoints = toHealthChartPoints(daily, range, (item) => item.sleep_minutes > 0 ? item.sleep_minutes : null);
+  const breathingPoints = toHealthChartPoints(daily, range, (item) => item.breathing_minutes > 0 ? item.breathing_minutes : null);
+
+  const charts: ProfileHealthChart[] = [
+    {
+      key: 'mood',
+      title: 'Tâm trạng',
+      subtitle: 'Điểm check-in 1-5',
+      color: '#1D6B63',
+      maxValue: 5,
+      data: moodPoints,
+    },
+    {
+      key: 'assessment',
+      title: 'Mức độ bài test',
+      subtitle: '0 ổn định, 4 rất nặng',
+      color: '#7350A6',
+      maxValue: 4,
+      data: assessmentPoints,
+      reverseGood: true,
+      allowZero: true,
+    },
+    {
+      key: 'sleep',
+      title: 'Giấc ngủ',
+      subtitle: 'Số phút đã nghe',
+      color: '#2F6EDB',
+      maxValue: getMaxPointValue(sleepPoints, 30),
+      data: sleepPoints,
+      valueSuffix: 'p',
+    },
+    {
+      key: 'breathing',
+      title: 'Hít thở',
+      subtitle: 'Số phút luyện tập',
+      color: '#D77948',
+      maxValue: getMaxPointValue(breathingPoints, 10),
+      data: breathingPoints,
+      valueSuffix: 'p',
+    },
+  ];
+
+  return charts.filter((chart) => hasEnoughChartPoints(chart.data, !!chart.allowZero));
+}
+
+function toHealthChartPoints(
+  daily: DailyHealthPoint[],
+  range: HealthRangeKey,
+  valueSelector: (item: DailyHealthPoint) => number | null | undefined,
+): HealthChartPoint[] {
+  return daily.map((item) => {
+    const rawValue = valueSelector(item);
+    const value = rawValue === null || rawValue === undefined ? null : Number(rawValue);
+
+    return {
+      date: item.date,
+      label: formatChartPointLabel(item.date, range),
+      value: value !== null && Number.isFinite(value) ? value : null,
+    };
+  });
+}
+
+function hasEnoughChartPoints(data: HealthChartPoint[], allowZero = false) {
+  const validPointCount = data.filter((item) => {
+    if (item.value === null) return false;
+    return allowZero ? item.value >= 0 : item.value > 0;
+  }).length;
+
+  return validPointCount >= 2;
+}
+
+function getMaxPointValue(data: HealthChartPoint[], fallback: number) {
+  const maxValue = Math.max(...data.map((item) => item.value ?? 0));
+  return Math.max(fallback, maxValue);
+}
+
+function formatMetricValue(value: number, suffix = '') {
+  const rounded = Math.round(value * 10) / 10;
+  const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return `${text}${suffix}`;
+}
+
+function formatChartPointLabel(value: string, range: HealthRangeKey) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  if (range === 'week') {
+    return ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()];
+  }
+
+  if (range === 'year') {
+    return `T${date.getMonth() + 1}`;
+  }
+
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+function getHealthRangeTitle(range: HealthRangeKey) {
+  if (range === 'month') return 'Sức khỏe tháng này';
+  if (range === 'year') return 'Sức khỏe năm nay';
+  return 'Sức khỏe tuần này';
+}
+
+function buildSmoothPath(points: { x: number; y: number }[]) {
   if (points.length === 0) return '';
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 
@@ -696,9 +901,16 @@ const styles = StyleSheet.create({
   chartPanel: { marginTop: Spacing.md, backgroundColor: '#FFF', borderRadius: BorderRadius.md, padding: Spacing.md },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   sectionTitle: { fontFamily: 'Manrope', fontSize: 18, fontWeight: '900', color: '#144E49' },
-  mockLabel: { fontFamily: 'Manrope', fontSize: 11, fontWeight: '800', color: '#7350A6', backgroundColor: '#EEE4FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  rangeLabel: { fontFamily: 'Manrope', fontSize: 11, fontWeight: '800', color: '#7350A6', backgroundColor: '#EEE4FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  rangeTabs: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  rangeTab: { flex: 1, height: 36, borderRadius: 18, backgroundColor: '#F4F7F6', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE7E4' },
+  rangeTabActive: { backgroundColor: '#1D6B63', borderColor: '#1D6B63' },
+  rangeTabText: { fontFamily: 'Manrope', fontSize: 12, fontWeight: '900', color: '#55736E' },
+  rangeTabTextActive: { color: '#FFF' },
+  chartEmptyText: { fontFamily: 'Manrope', fontSize: 13, lineHeight: 20, color: '#697774', textAlign: 'center', paddingVertical: Spacing.lg },
   chartItem: { paddingVertical: Spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E9EFED' },
   chartTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chartTitleBlock: { flex: 1, minWidth: 0, marginRight: Spacing.sm },
   chartTitle: { fontFamily: 'Manrope', fontSize: 15, fontWeight: '900', color: '#17211F' },
   chartTrend: { fontFamily: 'Manrope', fontSize: 12, color: '#697774', marginTop: 2 },
   chartScore: { fontFamily: 'Manrope', fontSize: 24, fontWeight: '900' },
