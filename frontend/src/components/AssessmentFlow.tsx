@@ -5,11 +5,20 @@ import AssessmentCard from './AssessmentCard';
 import QuestionnaireModal from './QuestionnaireModal';
 import ResultGauge from './ResultGauge';
 import api from '../services/api';
-import { Colors, Spacing } from '../../constants/theme';
+import { Spacing } from '../../constants/theme';
 
 interface AssessmentFlowProps {
   onClose: () => void;
 }
+
+const palette = {
+  canvas: '#FAF8F2',
+  text: '#111817',
+  muted: '#65736F',
+  primary: '#1D6B63',
+  primarySoft: '#E3F1EE',
+  border: 'rgba(20,78,73,0.14)',
+};
 
 export default function AssessmentFlow({ onClose }: AssessmentFlowProps) {
   const assessments = assessmentsData.filter((item: any) => item.questions);
@@ -77,7 +86,7 @@ export default function AssessmentFlow({ onClose }: AssessmentFlowProps) {
   };
 
   if (loading || submitting) {
-    return <ActivityIndicator size="large" color={Colors.light.primary} style={{marginTop: 50}} />;
+    return <ActivityIndicator size="large" color={palette.primary} style={styles.loader} />;
   }
 
   return (
@@ -86,7 +95,7 @@ export default function AssessmentFlow({ onClose }: AssessmentFlowProps) {
         <View style={styles.fullFlex}>
           <View style={styles.subHeaderRow}>
              <Text style={styles.sectionHeading}>Kết quả các bài đã làm</Text>
-             <TouchableOpacity onPress={() => setViewMode('tests')}>
+             <TouchableOpacity style={styles.headerAction} onPress={() => setViewMode('tests')} activeOpacity={0.82}>
                 <Text style={styles.seeAllText}>Trở về</Text>
              </TouchableOpacity>
           </View>
@@ -108,10 +117,10 @@ export default function AssessmentFlow({ onClose }: AssessmentFlowProps) {
           <View style={styles.subHeaderRow}>
              <Text style={styles.sectionHeading}>Bộ bài kiểm tra tâm lý</Text>
              <View style={{ flexDirection: 'row', gap: 10 }}>
-               <TouchableOpacity onPress={handleFetchHistory}>
+               <TouchableOpacity style={styles.headerAction} onPress={handleFetchHistory} activeOpacity={0.82}>
                   <Text style={styles.seeAllText}>Lịch sử</Text>
                </TouchableOpacity>
-               <TouchableOpacity onPress={onClose}>
+               <TouchableOpacity style={styles.headerAction} onPress={onClose} activeOpacity={0.82}>
                   <Text style={styles.seeAllText}>Đóng</Text>
                </TouchableOpacity>
              </View>
@@ -141,26 +150,42 @@ export default function AssessmentFlow({ onClose }: AssessmentFlowProps) {
 }
 
 const styles = StyleSheet.create({
-  fullFlex: { flex: 1 },
+  fullFlex: { flex: 1, backgroundColor: palette.canvas },
   scrollArea: { flex: 1 },
+  loader: {
+    marginTop: 50,
+  },
   subHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
     marginTop: Spacing.md,
+    marginBottom: Spacing.md,
+    paddingHorizontal: 2,
   },
   sectionHeading: {
-    fontSize: 20,
+    flex: 1,
+    fontSize: 21,
     fontFamily: 'Manrope',
-    fontWeight: 'bold',
-    color: Colors.light.onSurface,
-    marginBottom: Spacing.md,
+    fontWeight: '900',
+    color: palette.text,
+    letterSpacing: 0,
+    marginRight: Spacing.sm,
+  },
+  headerAction: {
+    minHeight: 34,
+    borderRadius: 17,
+    backgroundColor: palette.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.border,
   },
   seeAllText: {
-    color: Colors.light.primary,
-    fontWeight: 'bold',
+    color: palette.primary,
+    fontWeight: '900',
     fontFamily: 'Manrope',
-    fontSize: 14,
+    fontSize: 13,
   },
 });

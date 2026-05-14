@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
-import { Colors, Spacing, BorderRadius } from '../../constants/theme';
+import { Spacing, BorderRadius } from '../../constants/theme';
 
 interface QuestionnaireModalProps {
   visible: boolean;
@@ -11,8 +12,23 @@ interface QuestionnaireModalProps {
   onSubmit: (answers: any[]) => void;
 }
 
+const palette = {
+  canvas: '#FAF8F2',
+  card: '#FFFFFF',
+  text: '#111817',
+  muted: '#65736F',
+  primary: '#1D6B63',
+  primarySoft: '#E3F1EE',
+  primarySofter: '#F1F8F6',
+  danger: '#A33A3A',
+  dangerSoft: '#FBEAEA',
+  border: 'rgba(20,78,73,0.14)',
+  borderStrong: 'rgba(29,107,99,0.34)',
+};
+
 export default function QuestionnaireModal({ visible, onClose, assessment, onSubmit }: QuestionnaireModalProps) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,18 +91,24 @@ export default function QuestionnaireModal({ visible, onClose, assessment, onSub
     newAnswers.push({ question_order: question.order, score });
 
     setAnswers(newAnswers);
+    saveDraft(newAnswers, currentIndex);
+  };
 
-    // Chuyển câu tiếp theo hoặc hoàn thành
+  const handleConfirmAnswer = () => {
+    const question = assessment.questions[currentIndex];
+    const currentAnswer = answers.find(a => a.question_order === question.order);
+    if (!currentAnswer) return;
+
     if (currentIndex < assessment.questions.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
-      saveDraft(newAnswers, nextIndex);
+      saveDraft(answers, nextIndex);
     } else {
       // Confirm submit
       Alert.alert('Hoàn thành', 'Bạn đã trả lời hết các câu hỏi. Bạn muốn nộp bài?', [
         { text: 'Kiểm tra lại', style: 'cancel' },
         { text: 'Nộp bài', onPress: () => {
-           clearDraft().then(() => onSubmit(newAnswers));
+           clearDraft().then(() => onSubmit(answers));
         }}
       ]);
     }
@@ -94,7 +116,9 @@ export default function QuestionnaireModal({ visible, onClose, assessment, onSub
 
   const handleBack = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      const previousIndex = currentIndex - 1;
+      setCurrentIndex(previousIndex);
+      saveDraft(answers, previousIndex);
     }
   };
 
@@ -111,14 +135,14 @@ export default function QuestionnaireModal({ visible, onClose, assessment, onSub
   const currentAnswer = answers.find(a => a.question_order === currentQuestion?.order);
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.container}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         {loading ? (
-          <ActivityIndicator size="large" color={Colors.light.primary} style={{marginTop: 50}} />
+          <ActivityIndicator size="large" color={palette.primary} style={styles.loader} />
         ) : (
           <>
             <View style={styles.header}>
-              <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+              <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.82}>
                 <Text style={styles.closeText}>Thoát (Lưu nháp)</Text>
               </TouchableOpacity>
               <Text style={styles.progressText}>
@@ -127,7 +151,7 @@ export default function QuestionnaireModal({ visible, onClose, assessment, onSub
             </View>
 
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${((currentIndex) / assessment.questions.length) * 100}%` }]} />
+              <View style={[styles.progressBarFill, { width: `${((currentIndex + 1) / assessment.questions.length) * 100}%` }]} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -137,30 +161,48 @@ export default function QuestionnaireModal({ visible, onClose, assessment, onSub
                 {assessment.options.map((option: any, idx: number) => {
                   const isSelected = currentAnswer?.score === option.score;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={idx}
-                      style={[styles.optionBtn, isSelected && styles.optionBtnSelected]}
+                      style={({ pressed }) => [
+                        styles.optionBtn,
+                        pressed && styles.optionBtnPressed,
+                        isSelected && styles.optionBtnSelected,
+                      ]}
                       onPress={() => handleSelectOption(option.score)}
-                      activeOpacity={0.7}
                     >
-                      <View style={[styles.radio, isSelected && styles.radioSelected]} />
+                      <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                        {isSelected ? <View style={styles.radioDot} /> : null}
+                      </View>
                       <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                         {option.label}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
             </ScrollView>
 
-            <View style={styles.footer}>
-              <TouchableOpacity 
-                style={[styles.navBtn, currentIndex === 0 && styles.navBtnDisabled]} 
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+              <TouchableOpacity
+                style={[styles.backBtn, currentIndex === 0 && styles.backBtnDisabled]}
                 onPress={handleBack}
                 disabled={currentIndex === 0}
+                activeOpacity={0.82}
               >
-                <Text style={[styles.navBtnText, currentIndex === 0 && styles.navBtnTextDisabled]}>Trở lại</Text>
+                <Text style={[styles.backBtnText, currentIndex === 0 && styles.backBtnTextDisabled]}>Trở lại</Text>
               </TouchableOpacity>
+
+              {currentAnswer ? (
+                <TouchableOpacity
+                  style={styles.confirmBtn}
+                  onPress={handleConfirmAnswer}
+                  activeOpacity={0.86}
+                >
+                  <Text style={styles.confirmBtnText}>
+                    {currentIndex === assessment.questions.length - 1 ? 'Nộp bài' : 'Xác nhận'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </>
         )}
@@ -172,49 +214,75 @@ export default function QuestionnaireModal({ visible, onClose, assessment, onSub
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: palette.canvas,
+  },
+  loader: {
+    marginTop: 50,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.outlineVariant,
+    backgroundColor: palette.canvas,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: palette.border,
   },
   closeBtn: {
-    padding: 8,
+    minHeight: 38,
+    borderRadius: 19,
+    backgroundColor: palette.dangerSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(163,58,58,0.18)',
   },
   closeText: {
-    color: Colors.light.onSurfaceVariant,
-    fontSize: 16,
+    color: palette.danger,
+    fontSize: 13,
+    fontWeight: '900',
     fontFamily: 'Manrope',
   },
   progressText: {
-    color: Colors.light.onSurface,
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: palette.primary,
+    fontSize: 14,
+    fontWeight: '900',
     fontFamily: 'Manrope',
+    backgroundColor: palette.primarySoft,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    overflow: 'hidden',
   },
   progressBarBg: {
-    height: 4,
-    backgroundColor: Colors.light.surfaceContainerLow,
+    height: 6,
+    backgroundColor: '#E7EEEB',
     width: '100%',
   },
   progressBarFill: {
-    height: 4,
-    backgroundColor: Colors.light.primary,
+    height: 6,
+    backgroundColor: palette.primary,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
   },
   content: {
-    padding: Spacing.xl,
+    padding: Spacing.md,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
   },
   questionText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: Colors.light.onSurface,
-    marginBottom: Spacing.xl,
-    lineHeight: 32,
+    fontSize: 21,
+    fontWeight: '900',
+    color: palette.text,
+    marginBottom: Spacing.lg,
+    lineHeight: 31,
     fontFamily: 'Manrope',
+    backgroundColor: palette.card,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.border,
   },
   optionsContainer: {
     width: '100%',
@@ -222,62 +290,100 @@ const styles = StyleSheet.create({
   optionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.light.surfaceContainerLowest,
-    padding: Spacing.md,
+    backgroundColor: palette.card,
+    paddingVertical: 15,
+    paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: Colors.light.outlineVariant,
+    borderColor: palette.border,
+    minHeight: 58,
+  },
+  optionBtnPressed: {
+    borderColor: palette.borderStrong,
+    backgroundColor: '#F3F8F6',
+    transform: [{ scale: 0.985 }],
   },
   optionBtnSelected: {
-    borderColor: Colors.light.primary,
-    backgroundColor: Colors.light.primary + '1A', // transparent primary
+    borderColor: palette.primary,
+    backgroundColor: palette.primarySofter,
   },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
-    borderColor: Colors.light.outlineVariant,
+    borderColor: '#B8C7C3',
     marginRight: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: Colors.light.primary,
-    backgroundColor: Colors.light.primary,
+    borderColor: palette.primary,
+    backgroundColor: palette.primarySoft,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: palette.primary,
   },
   optionText: {
-    color: Colors.light.onSurfaceVariant,
-    fontSize: 16,
+    color: palette.muted,
+    fontSize: 15,
     flex: 1,
     fontFamily: 'Manrope',
+    lineHeight: 22,
   },
   optionTextSelected: {
-    color: Colors.light.primary,
-    fontWeight: 'bold',
+    color: palette.primary,
+    fontWeight: '900',
   },
   footer: {
     flexDirection: 'row',
     padding: Spacing.md,
-    justifyContent: 'flex-start',
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.outlineVariant,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: palette.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.border,
   },
-  navBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: Colors.light.surfaceContainerHigh,
-    borderRadius: BorderRadius.sm,
+  backBtn: {
+    minHeight: 44,
+    paddingHorizontal: 18,
+    backgroundColor: '#EEF2F0',
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.border,
   },
-  navBtnDisabled: {
-    backgroundColor: 'transparent',
+  backBtnDisabled: {
+    opacity: 0.55,
   },
-  navBtnText: {
-    color: Colors.light.onSurface,
-    fontSize: 16,
-    fontWeight: 'bold',
+  backBtnText: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '900',
     fontFamily: 'Manrope',
   },
-  navBtnTextDisabled: {
-    color: Colors.light.onSurfaceVariant,
+  backBtnTextDisabled: {
+    color: '#8B9693',
+  },
+  confirmBtn: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: BorderRadius.full,
+    backgroundColor: palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  confirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+    fontFamily: 'Manrope',
   }
 });

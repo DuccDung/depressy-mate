@@ -1,15 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
+import { Spacing, BorderRadius, Shadows } from '../../constants/theme';
 
 interface AssessmentCardProps {
   assessment: any;
   onPress: () => void;
 }
 
+const palette = {
+  card: '#FFFFFF',
+  text: '#111817',
+  muted: '#65736F',
+  primary: '#1D6B63',
+  primarySoft: '#E3F1EE',
+  accent: '#7350A6',
+  accentSoft: '#F0E9FB',
+  border: 'rgba(20,78,73,0.12)',
+};
+
 export default function AssessmentCard({ assessment, onPress }: AssessmentCardProps) {
   return (
-    <TouchableOpacity style={[styles.card, Shadows.ambient]} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.card, Shadows.ambient]} onPress={onPress} activeOpacity={0.86}>
       <View style={styles.headerRow}>
         <Text style={styles.codeBadge}>{assessment.assessment_code}</Text>
         <Text style={styles.ageBadge}>Độ tuổi: {assessment.target_age}</Text>
@@ -24,46 +35,54 @@ export default function AssessmentCard({ assessment, onPress }: AssessmentCardPr
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.light.surfaceContainerLowest,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
+    backgroundColor: palette.card,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
     marginBottom: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.border,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   codeBadge: {
-    backgroundColor: Colors.light.primary,
-    color: Colors.light.surfaceContainerLowest,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: palette.primary,
+    color: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontFamily: 'Manrope',
+    overflow: 'hidden',
   },
   ageBadge: {
-    backgroundColor: Colors.light.surfaceContainerLow,
-    color: Colors.light.onSurfaceVariant,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: palette.accentSoft,
+    color: palette.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
     fontSize: 12,
+    fontWeight: '900',
     fontFamily: 'Manrope',
+    overflow: 'hidden',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.light.onSurface,
-    marginBottom: Spacing.xs,
+    fontSize: 17,
+    fontWeight: '900',
+    color: palette.text,
+    lineHeight: 24,
+    marginBottom: 6,
     fontFamily: 'Manrope',
   },
   description: {
     fontSize: 14,
-    color: Colors.light.onSurfaceVariant,
-    lineHeight: 20,
+    color: palette.muted,
+    lineHeight: 21,
     fontFamily: 'Manrope',
   },
 });
