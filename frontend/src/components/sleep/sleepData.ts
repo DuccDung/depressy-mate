@@ -1,21 +1,23 @@
 /**
  * Sleep Sounds & Tips Data
- * All sound URLs are free ambient/nature sounds hosted publicly.
- * Images are from Unsplash for beautiful sleep-themed visuals.
+ * Audio files are bundled from frontend/assets/audios for offline playback.
+ * Images are from Unsplash for sleep-themed visuals.
  */
 
 export interface SleepTrack {
   id: string;
   title: string;
   artist: string;
-  duration: string;       // Display string e.g. "30 phút"
-  durationMs: number;     // Duration in ms for progress bar
+  duration: string;
+  durationMs: number;
   category: 'ambient' | 'nature' | 'guided' | 'music';
   categoryLabel: string;
   image: string;
-  audioUrl: string;
-  bgColor: string;        // Tint color for the card
+  audioSource: number;
+  bgColor: string;
 }
+
+export const SLEEP_SESSION_DURATION_MS = 30 * 60 * 1000;
 
 export const SLEEP_TRACKS: SleepTrack[] = [
   {
@@ -23,71 +25,71 @@ export const SLEEP_TRACKS: SleepTrack[] = [
     title: 'Mưa Nhẹ Đêm',
     artist: 'Thiên Nhiên',
     duration: '30 phút',
-    durationMs: 30 * 60 * 1000,
+    durationMs: SLEEP_SESSION_DURATION_MS,
     category: 'nature',
     categoryLabel: 'THIÊN NHIÊN',
     image: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=400&q=80',
-    audioUrl: 'https://cdn.pixabay.com/audio/2022/10/30/audio_607df6a0f7.mp3',
+    audioSource: require('../../../assets/audios/raining.mp3'),
     bgColor: 'rgba(167, 243, 208, 0.25)',
   },
   {
     id: 'ocean',
     title: 'Sóng Biển Dịu Dàng',
     artist: 'Đại Dương',
-    duration: '45 phút',
-    durationMs: 45 * 60 * 1000,
+    duration: '30 phút',
+    durationMs: SLEEP_SESSION_DURATION_MS,
     category: 'nature',
     categoryLabel: 'THIÊN NHIÊN',
     image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80',
-    audioUrl: 'https://cdn.pixabay.com/audio/2022/08/31/audio_419263af94.mp3',
+    audioSource: require('../../../assets/audios/ocean_waves.mp3'),
     bgColor: 'rgba(191, 219, 254, 0.3)',
   },
   {
     id: 'piano',
     title: 'Piano Ru Ngủ',
     artist: 'Acoustic Dreams',
-    duration: '20 phút',
-    durationMs: 20 * 60 * 1000,
+    duration: '30 phút',
+    durationMs: SLEEP_SESSION_DURATION_MS,
     category: 'music',
     categoryLabel: 'ÂM NHẠC',
     image: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400&q=80',
-    audioUrl: 'https://cdn.pixabay.com/audio/2023/09/25/audio_0ebc3e1dfe.mp3',
+    audioSource: require('../../../assets/audios/piano.mp3'),
     bgColor: 'rgba(221, 214, 254, 0.3)',
   },
   {
     id: 'forest',
     title: 'Rừng Đêm Tĩnh Lặng',
     artist: 'Thiên Nhiên',
-    duration: '60 phút',
-    durationMs: 60 * 60 * 1000,
+    duration: '30 phút',
+    durationMs: SLEEP_SESSION_DURATION_MS,
     category: 'ambient',
     categoryLabel: 'AMBIENT',
     image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=80',
-    audioUrl: 'https://cdn.pixabay.com/audio/2022/03/15/audio_4abfc1b6db.mp3',
+    audioSource: require('../../../assets/audios/forest.mp3'),
     bgColor: 'rgba(167, 243, 208, 0.2)',
   },
   {
     id: 'meditation',
     title: 'Thiền Trước Giấc Ngủ',
     artist: 'Sanctuary Guide',
-    duration: '15 phút',
-    durationMs: 15 * 60 * 1000,
+    duration: '30 phút',
+    durationMs: SLEEP_SESSION_DURATION_MS,
     category: 'guided',
     categoryLabel: 'HƯỚNG DẪN',
     image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&q=80',
-    audioUrl: 'https://cdn.pixabay.com/audio/2023/07/07/audio_e3f3b8e3a2.mp3',
+    audioSource: require('../../../assets/audios/meditation.mp3'),
     bgColor: 'rgba(255, 243, 224, 0.4)',
   },
   {
     id: 'lofi',
     title: 'Lo-fi Chill Night',
     artist: 'Midnight Vibes',
-    duration: '40 phút',
-    durationMs: 40 * 60 * 1000,
+    duration: '30 phút',
+    durationMs: SLEEP_SESSION_DURATION_MS,
     category: 'music',
     categoryLabel: 'ÂM NHẠC',
     image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
-    audioUrl: 'https://cdn.pixabay.com/audio/2024/11/04/audio_af11f8e154.mp3',
+    audioSource: require('../../../assets/audios/lofi.mp3'),
     bgColor: 'rgba(221, 214, 254, 0.25)',
   },
 ];

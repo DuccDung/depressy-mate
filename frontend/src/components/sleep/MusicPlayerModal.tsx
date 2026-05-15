@@ -31,6 +31,8 @@ interface Props {
   onSessionEnd?: (payload: { track: SleepTrack; durationMs: number; listenedMs: number }) => void;
 }
 
+const ALBUM_SIZE = SCREEN_WIDTH * 0.7;
+
 export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd }: Props) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -39,6 +41,9 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
   const [isLoading, setIsLoading] = useState(false);
   const positionRef = React.useRef(0);
   const durationRef = React.useRef(0);
+  const listenedMsRef = React.useRef(0);
+  const playStartedAtRef = React.useRef<number | null>(null);
+  const autoStopTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Album art animation
   const albumScale = useSharedValue(0.85);
@@ -57,6 +62,15 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
       albumOpacity.value = 0;
     }
   }, [visible, track]);
+
+  useEffect(() => {
+    return () => {
+      clearAutoStopTimer();
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [sound]);
 
   // Pulsing animation when playing
   useEffect(() => {
@@ -79,6 +93,10 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
 
     try {
       setIsLoading(true);
+      listenedMsRef.current = 0;
+      playStartedAtRef.current = null;
+      clearAutoStopTimer();
+
       // Unload existing sound
       if (sound) {
         await sound.unloadAsync();
@@ -90,7 +108,7 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
       });
 
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: track.audioUrl },
+        track.audioSource,
         { shouldPlay: false, isLooping: true },
         onPlaybackStatusUpdate
       );
@@ -103,12 +121,43 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     }
   };
 
+  const clearAutoStopTimer = () => {
+    if (autoStopTimerRef.current) {
+      clearTimeout(autoStopTimerRef.current);
+      autoStopTimerRef.current = null;
+    }
+  };
+
+  const syncListenedTime = () => {
+    if (!playStartedAtRef.current) return listenedMsRef.current;
+
+    listenedMsRef.current += Date.now() - playStartedAtRef.current;
+    playStartedAtRef.current = null;
+    return listenedMsRef.current;
+  };
+
+  const scheduleAutoStop = () => {
+    if (!track) return;
+
+    clearAutoStopTimer();
+    const remainingMs = Math.max(track.durationMs - listenedMsRef.current, 0);
+
+    autoStopTimerRef.current = setTimeout(() => {
+      handleClose();
+    }, remainingMs);
+  };
+
   const onPlaybackStatusUpdate = (status: any) => {
     if (status.isLoaded) {
-      positionRef.current = status.positionMillis || 0;
-      durationRef.current = status.durationMillis || 0;
-      setPosition(status.positionMillis || 0);
-      setDuration(status.durationMillis || 0);
+      const sessionDuration = track?.durationMs || status.durationMillis || 0;
+      const currentListenedMs = listenedMsRef.current + (
+        playStartedAtRef.current ? Date.now() - playStartedAtRef.current : 0
+      );
+
+      positionRef.current = Math.min(currentListenedMs, sessionDuration);
+      durationRef.current = sessionDuration;
+      setPosition(positionRef.current);
+      setDuration(sessionDuration);
       setIsPlaying(status.isPlaying || false);
     }
   };
@@ -118,9 +167,13 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
 
     try {
       if (isPlaying) {
+        syncListenedTime();
+        clearAutoStopTimer();
         await sound.pauseAsync();
       } else {
         await sound.playAsync();
+        playStartedAtRef.current = Date.now();
+        scheduleAutoStop();
       }
     } catch (error) {
       console.log('Error toggling playback:', error);
@@ -131,9 +184,12 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     if (!sound) return;
 
     try {
+      const status = await sound.getStatusAsync();
+      const fileDuration = status.isLoaded ? status.durationMillis || 0 : 0;
+      const filePosition = status.isLoaded ? status.positionMillis || 0 : 0;
       const newPosition = direction === 'forward'
-        ? Math.min(position + 15000, duration)
-        : Math.max(position - 15000, 0);
+        ? Math.min(filePosition + 15000, fileDuration)
+        : Math.max(filePosition - 15000, 0);
       await sound.setPositionAsync(newPosition);
     } catch (error) {
       console.log('Error seeking:', error);
@@ -142,11 +198,14 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
 
   const handleClose = async () => {
     try {
-      if (track && positionRef.current >= 1000) {
+      clearAutoStopTimer();
+      const listenedMs = syncListenedTime();
+
+      if (track && listenedMs >= 1000) {
         onSessionEnd?.({
           track,
-          durationMs: durationRef.current || track.durationMs,
-          listenedMs: positionRef.current,
+          durationMs: track.durationMs,
+          listenedMs: Math.min(listenedMs, track.durationMs),
         });
       }
 
@@ -163,6 +222,8 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     setDuration(0);
     positionRef.current = 0;
     durationRef.current = 0;
+    listenedMsRef.current = 0;
+    playStartedAtRef.current = null;
     onClose();
   };
 
@@ -216,7 +277,7 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
           <Animated.View style={[styles.albumShadow, pulseStyle]}>
             <View style={styles.albumContainer}>
               <Image source={{ uri: track.image }} style={styles.albumImage} />
-              {/* Vinyl disc overlay */}
+              {/* Vinyl overlay */}
               <View style={styles.vinylOverlay}>
                 <View style={styles.vinylCenter} />
               </View>
@@ -303,8 +364,6 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     </Modal>
   );
 }
-
-const ALBUM_SIZE = SCREEN_WIDTH * 0.7;
 
 const styles = StyleSheet.create({
   container: {
