@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAuth } from '../contexts/AuthContext';
-import { Spacing, BorderRadius, Shadows } from '../../constants/theme';
-import { getFacebookAccessToken } from '../services/facebookAuth';
-import { getGoogleIdToken } from '../services/googleAuth';
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { BorderRadius, Shadows, Spacing } from "../../constants/theme";
+import { useAuth } from "../contexts/AuthContext";
+import { getFacebookAccessToken } from "../services/facebookAuth";
+import { getGoogleIdToken } from "../services/googleAuth";
 
 type AuthStackParamList = {
   Login: undefined;
@@ -26,11 +26,12 @@ type AuthStackParamList = {
 };
 
 type Props = {
-  navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
+  navigation: NativeStackNavigationProp<AuthStackParamList, "Register">;
 };
 
 type RegisterErrors = {
   fullName?: string;
+  age?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
@@ -40,16 +41,16 @@ type RegisterErrors = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const THEME_COLORS = {
-  background: '#FAF8F2',
-  primary: '#1D6B63',
-  primarySoft: '#E3F1EE',
-  text: '#111817',
-  secondaryText: '#65736F',
-  divider: '#DDE7E4',
-  cardBg: '#FFFFFF',
-  danger: '#A33A3A',
-  mutedBg: '#F7FAF8',
-  border: '#DCE7E4',
+  background: "#FAF8F2",
+  primary: "#1D6B63",
+  primarySoft: "#E3F1EE",
+  text: "#111817",
+  secondaryText: "#65736F",
+  divider: "#DDE7E4",
+  cardBg: "#FFFFFF",
+  danger: "#A33A3A",
+  mutedBg: "#F7FAF8",
+  border: "#DCE7E4",
 };
 
 const getApiErrorMessage = (error: any, fallback: string) => {
@@ -57,11 +58,12 @@ const getApiErrorMessage = (error: any, fallback: string) => {
 };
 
 export default function RegisterScreen({ navigation }: Props) {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [otp, setOtp] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [age, setAge] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -84,29 +86,36 @@ export default function RegisterScreen({ navigation }: Props) {
     const nextErrors: RegisterErrors = {};
     const normalizedEmail = email.trim();
     const normalizedFullName = fullName.trim();
+    const normalizedAge = Number(age);
 
     if (!normalizedFullName) {
-      nextErrors.fullName = 'Vui lòng nhập họ và tên.';
+      nextErrors.fullName = "Vui lòng nhập họ và tên.";
     } else if (normalizedFullName.length < 2) {
-      nextErrors.fullName = 'Họ và tên phải có ít nhất 2 ký tự.';
+      nextErrors.fullName = "Họ và tên phải có ít nhất 2 ký tự.";
+    }
+
+    if (!age.trim()) {
+      nextErrors.age = "Vui lòng nhập tuổi.";
+    } else if (!Number.isInteger(normalizedAge) || normalizedAge < 6 || normalizedAge > 120) {
+      nextErrors.age = "Tuổi phải nằm trong khoảng 6 đến 120.";
     }
 
     if (!normalizedEmail) {
-      nextErrors.email = 'Vui lòng nhập email.';
+      nextErrors.email = "Vui lòng nhập email.";
     } else if (!EMAIL_REGEX.test(normalizedEmail)) {
-      nextErrors.email = 'Email không hợp lệ.';
+      nextErrors.email = "Email không hợp lệ.";
     }
 
     if (!password) {
-      nextErrors.password = 'Vui lòng nhập mật khẩu.';
+      nextErrors.password = "Vui lòng nhập mật khẩu.";
     } else if (password.length < 6) {
-      nextErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
+      nextErrors.password = "Mật khẩu phải có ít nhất 6 ký tự.";
     }
 
     if (!confirmPassword) {
-      nextErrors.confirmPassword = 'Vui lòng nhập lại mật khẩu.';
+      nextErrors.confirmPassword = "Vui lòng nhập lại mật khẩu.";
     } else if (password !== confirmPassword) {
-      nextErrors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+      nextErrors.confirmPassword = "Mật khẩu xác nhận không khớp.";
     }
 
     setErrors(nextErrors);
@@ -118,9 +127,9 @@ export default function RegisterScreen({ navigation }: Props) {
     const nextErrors: RegisterErrors = {};
 
     if (!normalizedOtp) {
-      nextErrors.otp = 'Vui lòng nhập mã OTP.';
+      nextErrors.otp = "Vui lòng nhập mã OTP.";
     } else if (!/^\d{6}$/.test(normalizedOtp)) {
-      nextErrors.otp = 'Mã OTP gồm 6 chữ số.';
+      nextErrors.otp = "Mã OTP gồm 6 chữ số.";
     }
 
     setErrors(nextErrors);
@@ -129,21 +138,32 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleRequestOtp = async () => {
     if (!validateRegistrationForm()) {
-      Alert.alert('Thông tin chưa hợp lệ', 'Vui lòng kiểm tra lại thông tin đăng ký.');
+      Alert.alert(
+        "Thông tin chưa hợp lệ",
+        "Vui lòng kiểm tra lại thông tin đăng ký.",
+      );
       return;
     }
 
     setLoading(true);
     try {
-      await requestRegistrationOtp(email.trim().toLowerCase(), password, fullName.trim());
-      setOtp('');
+      await requestRegistrationOtp(
+        email.trim().toLowerCase(),
+        password,
+        fullName.trim(),
+        Number(age),
+      );
+      setOtp("");
       setOtpSent(true);
       setErrors({});
-      Alert.alert('Đã gửi mã OTP', 'Vui lòng kiểm tra email và nhập mã OTP để hoàn tất đăng ký.');
+      Alert.alert(
+        "Đã gửi mã OTP",
+        "Vui lòng kiểm tra email và nhập mã OTP để hoàn tất đăng ký.",
+      );
     } catch (error: any) {
       Alert.alert(
-        'Không thể gửi OTP',
-        getApiErrorMessage(error, 'Không thể gửi mã OTP. Vui lòng thử lại.')
+        "Không thể gửi OTP",
+        getApiErrorMessage(error, "Không thể gửi mã OTP. Vui lòng thử lại."),
       );
     } finally {
       setLoading(false);
@@ -152,7 +172,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleVerifyOtp = async () => {
     if (!validateOtp()) {
-      Alert.alert('OTP chưa hợp lệ', 'Vui lòng nhập mã OTP gồm 6 chữ số.');
+      Alert.alert("OTP chưa hợp lệ", "Vui lòng nhập mã OTP gồm 6 chữ số.");
       return;
     }
 
@@ -161,8 +181,11 @@ export default function RegisterScreen({ navigation }: Props) {
       await verifyRegistrationOtp(email.trim().toLowerCase(), otp.trim());
     } catch (error: any) {
       Alert.alert(
-        'Xác thực OTP thất bại',
-        getApiErrorMessage(error, 'Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.')
+        "Xác thực OTP thất bại",
+        getApiErrorMessage(
+          error,
+          "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.",
+        ),
       );
     } finally {
       setLoading(false);
@@ -170,7 +193,7 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   const handleEditEmail = () => {
-    setOtp('');
+    setOtp("");
     setOtpSent(false);
     setErrors({});
   };
@@ -186,8 +209,11 @@ export default function RegisterScreen({ navigation }: Props) {
       await loginWithGoogleIdToken(googleIdToken);
     } catch (error: any) {
       Alert.alert(
-        'Dang nhap Google that bai',
-        getApiErrorMessage(error, 'Khong the dang nhap bang Google. Vui long thu lai.')
+        "Dang nhap Google that bai",
+        getApiErrorMessage(
+          error,
+          "Khong the dang nhap bang Google. Vui long thu lai.",
+        ),
       );
     } finally {
       setLoading(false);
@@ -205,8 +231,11 @@ export default function RegisterScreen({ navigation }: Props) {
       await loginWithFacebookAccessToken(facebookAccessToken);
     } catch (error: any) {
       Alert.alert(
-        'Đăng nhập Facebook thất bại',
-        getApiErrorMessage(error, 'Không thể đăng nhập bằng Facebook. Vui lòng thử lại.')
+        "Đăng nhập Facebook thất bại",
+        getApiErrorMessage(
+          error,
+          "Không thể đăng nhập bằng Facebook. Vui lòng thử lại.",
+        ),
       );
     } finally {
       setLoading(false);
@@ -217,7 +246,7 @@ export default function RegisterScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -228,17 +257,37 @@ export default function RegisterScreen({ navigation }: Props) {
             <AuthBrandHeader />
 
             <View style={styles.stepRow}>
-              <View style={[styles.stepPill, !otpSent && styles.stepPillActive]}>
-                <Text style={[styles.stepText, !otpSent && styles.stepTextActive]}>1. Thông tin</Text>
+              <View
+                style={[styles.stepPill, !otpSent && styles.stepPillActive]}
+              >
+                <Text
+                  style={[styles.stepText, !otpSent && styles.stepTextActive]}
+                >
+                  1. Thông tin
+                </Text>
               </View>
               <View style={[styles.stepPill, otpSent && styles.stepPillActive]}>
-                <Text style={[styles.stepText, otpSent && styles.stepTextActive]}>2. Xác thực</Text>
+                <Text
+                  style={[styles.stepText, otpSent && styles.stepTextActive]}
+                >
+                  2. Xác thực
+                </Text>
               </View>
             </View>
 
             <Text style={styles.fieldLabel}>Họ và tên</Text>
-            <View style={[styles.inputWrapper, errors.fullName && styles.inputError]}>
-              <Ionicons name="person-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.fullName && styles.inputError,
+              ]}
+            >
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={THEME_COLORS.primary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Họ và tên"
@@ -246,17 +295,54 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={fullName}
                 onChangeText={(value) => {
                   setFullName(value);
-                  clearFieldError('fullName');
+                  clearFieldError("fullName");
                 }}
                 autoComplete="name"
                 editable={!otpSent && !loading}
               />
             </View>
-            {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
+            {errors.fullName && (
+              <Text style={styles.errorText}>{errors.fullName}</Text>
+            )}
+
+            <Text style={styles.fieldLabel}>Tuổi</Text>
+            <View
+              style={[styles.inputWrapper, errors.age && styles.inputError]}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={THEME_COLORS.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập tuổi của bạn"
+                placeholderTextColor="#8B9693"
+                value={age}
+                onChangeText={(value) => {
+                  setAge(value.replace(/\D/g, ""));
+                  clearFieldError("age");
+                }}
+                keyboardType="number-pad"
+                maxLength={3}
+                editable={!otpSent && !loading}
+              />
+            </View>
+            {errors.age && (
+              <Text style={styles.errorText}>{errors.age}</Text>
+            )}
 
             <Text style={styles.fieldLabel}>Email</Text>
-            <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <Ionicons name="mail-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
+            <View
+              style={[styles.inputWrapper, errors.email && styles.inputError]}
+            >
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color={THEME_COLORS.primary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="ban@example.com"
@@ -264,7 +350,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
-                  clearFieldError('email');
+                  clearFieldError("email");
                 }}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -273,11 +359,23 @@ export default function RegisterScreen({ navigation }: Props) {
                 editable={!otpSent && !loading}
               />
             </View>
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            {errors.email && (
+              <Text style={styles.errorText}>{errors.email}</Text>
+            )}
 
             <Text style={styles.fieldLabel}>Mật khẩu</Text>
-            <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-              <Ionicons name="lock-closed-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.password && styles.inputError,
+              ]}
+            >
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color={THEME_COLORS.primary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Mật khẩu"
@@ -285,7 +383,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
-                  clearFieldError('password');
+                  clearFieldError("password");
                 }}
                 secureTextEntry={!showPassword}
                 editable={!otpSent && !loading}
@@ -295,17 +393,29 @@ export default function RegisterScreen({ navigation }: Props) {
                 hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
               >
                 <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={20}
                   color={THEME_COLORS.secondaryText}
                 />
               </TouchableOpacity>
             </View>
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            {errors.password && (
+              <Text style={styles.errorText}>{errors.password}</Text>
+            )}
 
             <Text style={styles.fieldLabel}>Xác nhận mật khẩu</Text>
-            <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputWrapper,
+                errors.confirmPassword && styles.inputError,
+              ]}
+            >
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={THEME_COLORS.primary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Nhập lại mật khẩu"
@@ -313,7 +423,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 value={confirmPassword}
                 onChangeText={(value) => {
                   setConfirmPassword(value);
-                  clearFieldError('confirmPassword');
+                  clearFieldError("confirmPassword");
                 }}
                 secureTextEntry={!showConfirmPassword}
                 editable={!otpSent && !loading}
@@ -323,43 +433,61 @@ export default function RegisterScreen({ navigation }: Props) {
                 hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
               >
                 <Ionicons
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                   size={20}
                   color={THEME_COLORS.secondaryText}
                 />
               </TouchableOpacity>
             </View>
-            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+            {errors.confirmPassword && (
+              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+            )}
 
             {otpSent && (
               <>
                 <Text style={styles.otpDescription}>
-                  Mã OTP đã được gửi tới {email.trim()}. Mã có hiệu lực trong 10 phút.
+                  Mã OTP đã được gửi tới {email.trim()}. Mã có hiệu lực trong 10
+                  phút.
                 </Text>
 
-                <View style={[styles.inputWrapper, errors.otp && styles.inputError]}>
-                  <Ionicons name="key-outline" size={20} color={THEME_COLORS.primary} style={styles.inputIcon} />
+                <View
+                  style={[styles.inputWrapper, errors.otp && styles.inputError]}
+                >
+                  <Ionicons
+                    name="key-outline"
+                    size={20}
+                    color={THEME_COLORS.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Mã OTP"
                     placeholderTextColor="#8B9693"
                     value={otp}
                     onChangeText={(value) => {
-                      setOtp(value.replace(/\D/g, ''));
-                      clearFieldError('otp');
+                      setOtp(value.replace(/\D/g, ""));
+                      clearFieldError("otp");
                     }}
                     keyboardType="number-pad"
                     maxLength={6}
                     editable={!loading}
                   />
                 </View>
-                {errors.otp && <Text style={styles.errorText}>{errors.otp}</Text>}
+                {errors.otp && (
+                  <Text style={styles.errorText}>{errors.otp}</Text>
+                )}
 
                 <View style={styles.otpActions}>
-                  <TouchableOpacity onPress={handleRequestOtp} disabled={loading}>
+                  <TouchableOpacity
+                    onPress={handleRequestOtp}
+                    disabled={loading}
+                  >
                     <Text style={styles.otpActionText}>Gửi lại OTP</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleEditEmail} disabled={loading}>
+                  <TouchableOpacity
+                    onPress={handleEditEmail}
+                    disabled={loading}
+                  >
                     <Text style={styles.otpActionText}>Đổi email</Text>
                   </TouchableOpacity>
                 </View>
@@ -375,7 +503,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.primaryButtonText}>
-                  {otpSent ? 'Xác nhận OTP' : 'Gửi mã OTP'}
+                  {otpSent ? "Xác nhận OTP" : "Gửi mã OTP"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -387,12 +515,24 @@ export default function RegisterScreen({ navigation }: Props) {
             </View>
 
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleRegister} disabled={loading}>
-                <Ionicons name="logo-google" size={20} color={THEME_COLORS.primary} />
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleGoogleRegister}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="logo-google"
+                  size={20}
+                  color={THEME_COLORS.primary}
+                />
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.socialButton} onPress={handleFacebookRegister} disabled={loading}>
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleFacebookRegister}
+                disabled={loading}
+              >
                 <Ionicons name="logo-facebook" size={20} color="#1877F2" />
                 <Text style={styles.socialButtonText}>Facebook</Text>
               </TouchableOpacity>
@@ -419,14 +559,16 @@ function AuthBrandHeader() {
     <View style={styles.authBrand}>
       <View style={styles.logoBadge}>
         <Image
-          source={require('../../assets/images/brand_logo.png')}
+          source={require("../../assets/images/brand_logo.png")}
           style={styles.logo}
           resizeMode="cover"
         />
       </View>
       <View style={styles.brandTextBlock}>
-        <Text style={styles.appName}>Depressy Mate</Text>
-        <Text style={styles.brandCaption}>Bắt đầu nhẹ nhàng, theo dõi rõ ràng</Text>
+        <Text style={styles.appName}>Depressy</Text>
+        <Text style={styles.brandCaption}>
+          Lắng nghe tâm trí, thấu hiểu chính mình
+        </Text>
       </View>
     </View>
   );
@@ -442,25 +584,25 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xl,
   },
   authBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: Spacing.lg,
   },
   logoBadge: {
     width: 54,
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#F7FAF8',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#F7FAF8",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(29,107,99,0.16)',
-    overflow: 'hidden',
+    borderColor: "rgba(29,107,99,0.16)",
+    overflow: "hidden",
   },
   logo: {
     width: 64,
@@ -472,21 +614,21 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 27,
-    fontWeight: '900',
+    fontWeight: "900",
     color: THEME_COLORS.primary,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     includeFontPadding: false,
     lineHeight: 34,
   },
   brandCaption: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     color: THEME_COLORS.secondaryText,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     marginTop: 2,
   },
   stepRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
@@ -494,11 +636,11 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 38,
     borderRadius: BorderRadius.full,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(29,107,99,0.14)',
+    borderColor: "rgba(29,107,99,0.14)",
   },
   stepPillActive: {
     backgroundColor: THEME_COLORS.primary,
@@ -506,32 +648,32 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: "900",
     color: THEME_COLORS.secondaryText,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
   },
   stepTextActive: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   card: {
     backgroundColor: THEME_COLORS.cardBg,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
-    width: '100%',
+    width: "100%",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(20,78,73,0.12)',
+    borderColor: "rgba(20,78,73,0.12)",
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '900',
-    color: '#394541',
+    fontWeight: "900",
+    color: "#394541",
     marginTop: Spacing.sm,
     marginBottom: 7,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: THEME_COLORS.mutedBg,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -549,56 +691,56 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: THEME_COLORS.text,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
   },
   errorText: {
     color: THEME_COLORS.danger,
     fontSize: 12,
     marginTop: 6,
     marginLeft: 4,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
   },
   otpDescription: {
     color: THEME_COLORS.secondaryText,
     fontSize: 14,
     lineHeight: 20,
     marginTop: Spacing.md,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
     backgroundColor: THEME_COLORS.primarySoft,
     borderRadius: BorderRadius.sm,
     padding: Spacing.md,
   },
   otpActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: Spacing.sm,
   },
   otpActionText: {
     color: THEME_COLORS.primary,
     fontSize: 14,
-    fontWeight: '800',
-    fontFamily: 'Manrope',
+    fontWeight: "800",
+    fontFamily: "Manrope",
   },
   primaryButton: {
     backgroundColor: THEME_COLORS.primary,
     borderRadius: BorderRadius.full,
     height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: Spacing.lg,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 17,
-    fontWeight: '800',
-    fontFamily: 'Manrope',
+    fontWeight: "800",
+    fontFamily: "Manrope",
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: Spacing.lg,
   },
   dividerLine: {
@@ -608,45 +750,45 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     marginHorizontal: 12,
-    color: '#73807C',
+    color: "#73807C",
     fontSize: 12,
-    fontWeight: '800',
-    fontFamily: 'Manrope',
+    fontWeight: "800",
+    fontFamily: "Manrope",
   },
   socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
   },
   socialButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: THEME_COLORS.border,
     borderRadius: BorderRadius.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingVertical: 13,
     minHeight: 48,
   },
   socialButtonText: {
     color: THEME_COLORS.text,
-    fontWeight: '700',
+    fontWeight: "700",
     marginLeft: 8,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
   },
   linkButton: {
     marginTop: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   linkText: {
     color: THEME_COLORS.secondaryText,
     fontSize: 14,
-    fontFamily: 'Manrope',
+    fontFamily: "Manrope",
   },
   linkBold: {
     color: THEME_COLORS.primary,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 });

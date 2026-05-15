@@ -6,7 +6,7 @@ import axios from "axios";
 // Physical Device (Wifi): http://<YOUR_LAN_IP>:3000/api
 // Physical Device (USB): http://127.0.0.1:3000/api (run 'adb reverse tcp:3000 tcp:3000' first)
 // Fly.io Server: https://depressy-mate.fly.dev/api
-export const API_ORIGIN = "http://192.168.1.50:5210";
+export const API_ORIGIN = "http://192.168.1.103:5210";
 const API_BASE_URL = `${API_ORIGIN}/api`; // ASP.NET Core API
 
 const api = axios.create({

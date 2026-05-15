@@ -348,6 +348,7 @@ public class FacebookAuthApiController : ControllerBase
             email = user.Email,
             role = user.Role,
             fullName = user.Profile?.FullName ?? user.FullName,
+            age = user.Age,
             avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl,
             bio = user.Profile?.Bio,
             authProvider = string.IsNullOrWhiteSpace(user.AuthProvider) ? "facebook" : user.AuthProvider,

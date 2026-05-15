@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import AuthStack from './src/navigation/AuthStack';
 import MainStackNavigator from './src/navigation/MainStackNavigator';
+import AiChatAssistant from './src/components/ai/AiChatAssistant';
 import { Colors } from './constants/theme';
 
 // Custom theme cho navigation (sử dụng base schema "Radiant Sanctuary")
@@ -40,7 +41,14 @@ function AppNavigator() {
 
   return (
     <NavigationContainer theme={AppGlobalTheme}>
-      {token ? <MainStackNavigator /> : <AuthStack />}
+      {token ? (
+        <>
+          <MainStackNavigator />
+          <AiChatAssistant />
+        </>
+      ) : (
+        <AuthStack />
+      )}
     </NavigationContainer>
   );
 }

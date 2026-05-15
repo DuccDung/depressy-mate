@@ -1,0 +1,173 @@
+@model server.Models.Admin.AdminExploreContentFormViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.IsEdit ? "Sửa nội dung Khám phá" : "Thêm nội dung Khám phá";
+    var actionName = Model.IsEdit ? "Edit" : "Create";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+            <a class="active" asp-controller="AdminExplore" asp-action="Index">Khám phá</a>
+            <a asp-controller="AdminNotifications" asp-action="Index">Thông báo đẩy</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Explore & Learn</p>
+                <h1>@ViewData["Title"]</h1>
+                <p>Tạo dữ liệu động cho workshop, healing media, video YouTube và skill building card.</p>
+            </div>
+
+            <a class="admin-secondary-link compact" asp-controller="AdminExplore" asp-action="Index">Quay lại</a>
+        </header>
+
+        <section class="admin-panel compact-panel admin-user-form-panel">
+            <form asp-controller="AdminExplore"
+                  asp-action="@actionName"
+                  asp-route-id="@Model.Id"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="admin-user-form compact-form">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
+
+                <label class="admin-field">
+                    <span>Nhóm hiển thị</span>
+                    <select asp-for="CategoryId" asp-items="Model.Categories"></select>
+                    <span asp-validation-for="CategoryId" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Loại nội dung</span>
+                    <select asp-for="ContentType" asp-items="Model.ContentTypes"></select>
+                    <span asp-validation-for="ContentType" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Trạng thái</span>
+                    <select asp-for="Status" asp-items="Model.Statuses"></select>
+                </label>
+
+                <label class="admin-field">
+                    <span>Tiêu đề</span>
+                    <input asp-for="Title" placeholder="Ví dụ: Mindful Music" />
+                    <span asp-validation-for="Title" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Slug</span>
+                    <input asp-for="Slug" placeholder="Tự tạo từ tiêu đề nếu bỏ trống" />
+                    <span asp-validation-for="Slug" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Subtitle</span>
+                    <input asp-for="Subtitle" placeholder="Dòng mô tả ngắn bên dưới tiêu đề" />
+                    <span asp-validation-for="Subtitle" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Summary</span>
+                    <textarea asp-for="Summary" rows="3" placeholder="Mô tả dùng cho card hoặc preview..."></textarea>
+                    <span asp-validation-for="Summary" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Link YouTube</span>
+                    <input asp-for="YoutubeUrl" placeholder="https://www.youtube.com/watch?v=..." />
+                    <span asp-validation-for="YoutubeUrl" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>YouTube video id</span>
+                    <input asp-for="YoutubeVideoId" placeholder="Có thể bỏ trống để hệ thống tự tách từ link" />
+                </label>
+
+                <label class="admin-field">
+                    <span>Thumbnail URL</span>
+                    <input asp-for="ThumbnailUrl" placeholder="/uploads/explore/... hoặc https://..." />
+                </label>
+
+                <label class="admin-file-field">
+                    <span>Tải thumbnail</span>
+                    <input asp-for="ThumbnailFile" type="file" accept="image/png,image/jpeg,image/webp" />
+                    <small>Nếu chọn ảnh mới, hệ thống sẽ lưu vào <strong>/uploads/explore</strong>.</small>
+                    <span asp-validation-for="ThumbnailFile" class="admin-validation"></span>
+                </label>
+
+                <label class="admin-field">
+                    <span>Badge text</span>
+                    <input asp-for="BadgeText" placeholder="Therapeutic, Mindful..." />
+                </label>
+
+                <label class="admin-field">
+                    <span>Badge color</span>
+                    <input asp-for="BadgeColor" placeholder="#7350A6" />
+                </label>
+
+                <label class="admin-field">
+                    <span>Icon name</span>
+                    <input asp-for="IconName" placeholder="sparkles-outline, leaf-outline, create-outline..." />
+                </label>
+
+                <label class="admin-field">
+                    <span>Icon color</span>
+                    <input asp-for="IconColor" placeholder="#7350A6" />
+                </label>
+
+                <label class="admin-field">
+                    <span>Icon background</span>
+                    <input asp-for="IconBackgroundColor" placeholder="#EFE4FF" />
+                </label>
+
+                <label class="admin-field">
+                    <span>Nội dung bài viết</span>
+                    <textarea asp-for="Content" rows="8" placeholder="Nội dung chi tiết nếu người dùng mở bài viết..."></textarea>
+                </label>
+
+                <label class="admin-field">
+                    <span>Thứ tự hiển thị</span>
+                    <input asp-for="DisplayOrder" type="number" />
+                </label>
+
+                <label class="admin-check-field">
+                    <input asp-for="IsFeatured" />
+                    <span>Đánh dấu nổi bật</span>
+                </label>
+
+                <label class="admin-check-field">
+                    <input asp-for="IsActive" />
+                    <span>Cho phép hiển thị trên app</span>
+                </label>
+
+                <div class="admin-form-actions">
+                    <button type="submit" class="admin-primary-button compact">Lưu nội dung</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminExplore" asp-action="Index">Hủy</a>
+                </div>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

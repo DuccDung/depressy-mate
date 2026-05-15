@@ -1,0 +1,180 @@
+{
+  "dass21_comprehensive_system": {
+    "description": "Hệ thống phản hồi thông minh dựa trên tổ hợp kết quả DASS-21",
+    "metadata": {
+      "author": "MindCare Project",
+      "style": "Empathetic & Action-oriented",
+      "palette": "Lavender Healing"
+    },
+    "cases": [
+      {
+        "id": "CASE_01",
+        "title": "Trạng thái Cân bằng",
+        "combination": "Depression(0-9) & Anxiety(0-7) & Stress(0-14)",
+        "hex_color": "#A8E6CF",
+        "conclusion": "Bạn đang kiểm soát rất tốt sức khỏe tinh thần.",
+        "empathy_message": "Gửi đến bạn cái ôm nhẹ nhàng. Kết quả cho thấy bạn đang ở trạng thái bình tâm.",
+        "detailed_advice": "Hãy tiếp tục duy trì việc ngủ đủ giấc và tập thể dục để nuôi dưỡng năng lượng tích cực này nhé! Sự ổn định hôm nay là nền tảng cho sự bình yên ngày mai.",
+        "action_items": [
+          "Duy trì thói quen ngủ trước 23h",
+          "Tập thể dục nhẹ nhàng 15-30 phút/ngày",
+          "Thực hành lòng biết ơn mỗi tối"
+        ],
+        "navigation": [
+          {
+            "label": "Khám phá bài học mới",
+            "target": "Explore_Screen",
+            "icon": "library_books",
+            "type": "primary"
+          },
+          {
+            "label": "Ghi nhật ký hạnh phúc",
+            "target": "Journal_Screen",
+            "icon": "edit_note",
+            "type": "secondary"
+          }
+        ]
+      },
+      {
+        "id": "CASE_02",
+        "title": "Quá tải áp lực (Stress chủ đạo)",
+        "combination": "Stress(26-33) + Depression(Low) + Anxiety(Low)",
+        "hex_color": "#FFD3B6",
+        "conclusion": "Bạn đang bị 'burn-out' do áp lực bên ngoài.",
+        "empathy_message": "Bạn đang gồng gánh quá nhiều áp lực. Tôi thấu hiểu sự mệt mỏi mà bạn đang trải qua.",
+        "detailed_advice": "Stress mức độ nặng cho thấy cơ thể bạn đang kêu cứu. Hãy cho phép mình được nghỉ ngơi, hạn chế chất kích thích như caffeine để hệ thần kinh được dịu lại.",
+        "action_items": [
+          "Thực hiện bài tập hít thở sâu 4-7-8",
+          "Hạn chế trà, cà phê và thuốc lá",
+          "Tắt thông báo công việc sau 19h"
+        ],
+        "navigation": [
+          {
+            "label": "Tập hít thở ngay",
+            "target": "Breathe_Feature",
+            "icon": "air",
+            "type": "primary"
+          },
+          {
+            "label": "Nghe nhạc thư giãn",
+            "target": "Explore_Music",
+            "icon": "music_note",
+            "type": "secondary"
+          }
+        ]
+      },
+      {
+        "id": "CASE_03",
+        "title": "Bất an kịch phát (Lo âu chủ đạo)",
+        "combination": "Anxiety(>=20) + Stress(Any) + Depression(Any)",
+        "hex_color": "#FFAAA5",
+        "conclusion": "Bạn đang rơi vào trạng thái hoảng loạn hoặc lo âu cực độ.",
+        "empathy_message": "Cảm giác lo âu này không định nghĩa con người bạn. Bạn đã rất dũng cảm khi đối mặt với nó.",
+        "detailed_advice": "Đừng cố lập bản thân lúc này. Hãy kết nối ngay với người thân hoặc chuyên gia để tìm lại điểm tựa. Những cơn lo âu này chỉ là tạm thời.",
+        "action_items": [
+          "Sử dụng kỹ thuật nối đất Grounding 5-4-3-2-1",
+          "Tâm sự với người bạn tin tưởng nhất",
+          "Hạn chế xem tin tức tiêu cực"
+        ],
+        "navigation": [
+          {
+            "label": "Kết nối cộng đồng",
+            "target": "Community_Screen",
+            "icon": "groups",
+            "type": "primary"
+          },
+          {
+            "label": "Mẹo giảm lo âu",
+            "target": "Skill_Detail_Anxiety",
+            "icon": "lightbulb",
+            "type": "secondary"
+          }
+        ]
+      },
+      {
+        "id": "CASE_04",
+        "title": "Kiệt sức tinh thần (Trầm cảm chủ đạo)",
+        "combination": "Depression(21-27) + Anxiety(Low) + Stress(Low)",
+        "hex_color": "#DCD6F7",
+        "conclusion": "Bạn đang mất dần kết nối và niềm vui cuộc sống.",
+        "empathy_message": "Tôi đang gửi đến bạn cái ôm đầy sự chia sẻ. Mọi thứ có thể đang trông rất xám xịt lúc này.",
+        "detailed_advice": "Việc bạn tìm cho mình sự hỗ trợ từ một chuyên gia tâm lý sẽ là một quyết định tốt. Đừng ép bản thân phải 'vui lên' ngay lập tức, hãy đi từng bước nhỏ.",
+        "action_items": [
+          "Đặt lịch tư vấn với chuyên gia",
+          "Đảm bảo giấc ngủ đủ và chất lượng",
+          "Vận động nhẹ nhàng (đi dạo 10 phút)"
+        ],
+        "navigation": [
+          {
+            "label": "Gặp gỡ chuyên gia",
+            "target": "Contact_Screen",
+            "icon": "psychology",
+            "type": "primary"
+          },
+          {
+            "label": "Viết nhật ký cảm xúc",
+            "target": "Journal_Screen",
+            "icon": "history_edu",
+            "type": "secondary"
+          }
+        ]
+      },
+      {
+        "id": "CASE_05",
+        "title": "Hỗn hợp mệt mỏi",
+        "combination": "Tất cả chỉ số ở mức Vừa (Moderate)",
+        "hex_color": "#A6B1E1",
+        "conclusion": "Bạn đang rơi vào vòng xoáy tâm lý hỗn hợp.",
+        "empathy_message": "Cuộc sống hối hả có thể khiến chúng ta dễ dàng rơi vào trạng thái hỗn độn này.",
+        "detailed_advice": "Đây là lúc cần thiết lập lại thói quen sinh hoạt: ăn uống đúng giờ, tập yoga nhẹ nhàng để giải phóng endorphin - hormone hạnh phúc.",
+        "action_items": [
+          "Lập thời gian biểu sinh hoạt cố định",
+          "Tham gia một lớp học kỹ năng (nhảy, vẽ)",
+          "Thực hành thiền định 10 phút mỗi ngày"
+        ],
+        "navigation": [
+          {
+            "label": "Lập kế hoạch ngày",
+            "target": "Task_Planner",
+            "icon": "calendar_today",
+            "type": "primary"
+          },
+          {
+            "label": "Lớp học chữa lành",
+            "target": "Explore_Workshop",
+            "icon": "palette",
+            "type": "secondary"
+          }
+        ]
+      },
+      {
+        "id": "CASE_06",
+        "title": "Khủng hoảng nguy cấp",
+        "combination": "Ít nhất 2 chỉ số mức Rất nặng",
+        "hex_color": "#FF8B94",
+        "conclusion": "Bạn đang trong tình trạng cực kỳ nguy hiểm, cần can thiệp y tế ngay.",
+        "empathy_message": "Bạn không đơn độc! Rất nhiều người đang trải qua điều tương tự và đã vượt qua được.",
+        "detailed_advice": "Bạn đang trải qua giai đoạn khủng hoảng tâm lý nghiêm trọng nhất. Đừng chần chừ, hãy liên hệ ngay với người thân hoặc cơ sở y tế gần nhất.",
+        "action_items": [
+          "GỌI HỖ TRỢ KHẨN CẤP (SOS)",
+          "Đến ngay bệnh viện tâm thần gần nhất",
+          "Yêu cầu sự trợ giúp từ người thân bên cạnh"
+        ],
+        "navigation": [
+          {
+            "label": "GỌI CỨU TRỢ (SOS)",
+            "target": "Direct_Call_Hotline",
+            "icon": "emergency",
+            "type": "danger"
+          },
+          {
+            "label": "Chỉ đường tới bệnh viện",
+            "target": "Maps_Hospital",
+            "icon": "map",
+            "type": "secondary"
+          }
+        ]
+      }
+    ]
+  }
+}

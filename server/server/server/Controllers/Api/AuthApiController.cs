@@ -48,9 +48,15 @@ public class AuthApiController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Email) ||
             string.IsNullOrWhiteSpace(request.Password) ||
-            string.IsNullOrWhiteSpace(request.FullName))
+            string.IsNullOrWhiteSpace(request.FullName) ||
+            request.Age is null)
         {
-            return BadRequest(new { error = "Vui lòng nhập đầy đủ họ tên, email và mật khẩu." });
+            return BadRequest(new { error = "Vui long nhap day du ho ten, email, mat khau va tuoi." });
+        }
+
+        if (!IsValidAge(request.Age.Value))
+        {
+            return BadRequest(new { error = "Tuoi phai nam trong khoang 6 den 120." });
         }
 
         if (request.Password.Length < 6)
@@ -71,6 +77,7 @@ public class AuthApiController : ControllerBase
         {
             Email = email,
             FullName = request.FullName.Trim(),
+            Age = request.Age.Value,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             OtpHash = BCrypt.Net.BCrypt.HashPassword(otp),
             ExpiresAt = expiresAt
@@ -144,6 +151,7 @@ public class AuthApiController : ControllerBase
             PasswordHash = pendingRegistration.PasswordHash,
             Role = "USER",
             FullName = pendingRegistration.FullName,
+            Age = pendingRegistration.Age,
             AuthProvider = "local",
             IsEmailVerified = true,
             CreatedAt = now,
@@ -335,6 +343,7 @@ public class AuthApiController : ControllerBase
             email = user.Email,
             role = user.Role,
             fullName = user.Profile?.FullName ?? user.FullName,
+            age = user.Age,
             avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl,
             bio = user.Profile?.Bio,
             authProvider = string.IsNullOrWhiteSpace(user.AuthProvider) ? "local" : user.AuthProvider,
@@ -359,6 +368,11 @@ public class AuthApiController : ControllerBase
         return $"email_verification_otp:{userId}";
     }
 
+    private static bool IsValidAge(int age)
+    {
+        return age is >= 6 and <= 120;
+    }
+
     private sealed class PendingRegistration
     {
         public string Email { get; init; } = string.Empty;
@@ -366,6 +380,8 @@ public class AuthApiController : ControllerBase
         public string PasswordHash { get; init; } = string.Empty;
 
         public string FullName { get; init; } = string.Empty;
+
+        public int Age { get; init; }
 
         public string OtpHash { get; init; } = string.Empty;
 
@@ -388,7 +404,7 @@ public class AuthApiController : ControllerBase
     }
 }
 
-public record RegisterRequest(string Email, string Password, string FullName);
+public record RegisterRequest(string Email, string Password, string FullName, int? Age);
 
 public record VerifyRegisterOtpRequest(string Email, string Otp);
 

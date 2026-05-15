@@ -5,6 +5,7 @@ export interface ProfileDetails {
   email: string;
   role: string;
   fullName: string;
+  age?: number | null;
   avatarUrl?: string | null;
   bio?: string | null;
   authProvider?: string | null;
@@ -15,6 +16,7 @@ export interface ProfileDetails {
 
 export interface UpdateProfilePayload {
   fullName: string;
+  age?: number | null;
   avatarUrl?: string | null;
   bio?: string | null;
 }

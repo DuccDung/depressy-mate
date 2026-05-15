@@ -14,6 +14,7 @@ export interface User {
   email: string;
   role: string;
   fullName: string;
+  age?: number | null;
   avatarUrl?: string | null;
   bio?: string | null;
   authProvider?: string | null;
@@ -27,8 +28,8 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string) => Promise<void>;
-  requestRegistrationOtp: (email: string, password: string, fullName: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, age: number) => Promise<void>;
+  requestRegistrationOtp: (email: string, password: string, fullName: string, age: number) => Promise<void>;
   verifyRegistrationOtp: (email: string, otp: string) => Promise<void>;
   completeOAuthLogin: (newToken: string, userData: User) => Promise<void>;
   loginWithFacebookAccessToken: (accessToken: string) => Promise<void>;
@@ -101,8 +102,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await persistAuthSession(newToken, userData);
   };
 
-  const requestRegistrationOtp = async (email: string, password: string, fullName: string) => {
-    await api.post('/auth/register/request-otp', { email, password, fullName });
+  const requestRegistrationOtp = async (email: string, password: string, fullName: string, age: number) => {
+    await api.post('/auth/register/request-otp', { email, password, fullName, age });
   };
 
   const verifyRegistrationOtp = async (email: string, otp: string) => {

@@ -16,10 +16,10 @@ import { PostCard } from '../components/socials/PostCard';
 import { CommentModal } from '../components/socials/CommentModal';
 import { CreatePostScreen } from './socials/CreatePostScreen';
 import { Post, socialService } from '../services/socialService';
-import type { MainTabParamList } from '../navigation/MainTabNavigator';
+import type { MainStackParamList } from '../navigation/MainStackNavigator';
 
 type ExploreTab = 'community' | 'saved';
-type ExploreRouteProp = RouteProp<MainTabParamList, 'Explore'>;
+type ExploreRouteProp = RouteProp<MainStackParamList, 'Community'>;
 
 export default function ExploreScreen() {
   const route = useRoute<ExploreRouteProp>();

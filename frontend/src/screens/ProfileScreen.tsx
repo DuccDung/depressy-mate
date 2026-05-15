@@ -107,6 +107,7 @@ export default function ProfileScreen() {
         email: data.email,
         role: data.role,
         fullName: data.fullName,
+        age: data.age,
         avatarUrl: data.avatarUrl,
         bio: data.bio,
         authProvider: data.authProvider,

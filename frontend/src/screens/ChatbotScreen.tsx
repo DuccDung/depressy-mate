@@ -18,28 +18,27 @@ export default function ChatbotScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FAF8F2',
     paddingHorizontal: 20,
-    // paddingTop: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: '#1D6B63',
   },
   subtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#65736F',
     marginTop: 4,
     marginBottom: 24,
   },
   card: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#DCE7E4',
   },
   cardEmoji: {
     fontSize: 48,
@@ -47,7 +46,7 @@ const styles = StyleSheet.create({
   },
   cardText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#111817',
     textAlign: 'center',
   },
 });

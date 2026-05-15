@@ -21,6 +21,8 @@ public partial class User
 
     public string? AuthProvider { get; set; }
 
+    public int? Age { get; set; }
+
     public bool IsEmailVerified { get; set; }
 
     public DateTime CreatedAt { get; set; }
@@ -34,6 +36,12 @@ public partial class User
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
+
+    public virtual ICollection<ExploreContent> ExploreContentCreatedByNavigations { get; set; } = new List<ExploreContent>();
+
+    public virtual ICollection<ExploreContent> ExploreContentUpdatedByNavigations { get; set; } = new List<ExploreContent>();
+
+    public virtual ICollection<ExploreContentView> ExploreContentViews { get; set; } = new List<ExploreContentView>();
 
     public virtual ICollection<ConversationParticipant> ConversationParticipants { get; set; } = new List<ConversationParticipant>();
 

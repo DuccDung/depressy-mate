@@ -26,6 +26,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<PushNotificationService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<DeepSeekService>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.Configure<SupportOptions>(builder.Configuration.GetSection("Support"));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));

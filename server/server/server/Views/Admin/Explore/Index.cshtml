@@ -1,0 +1,178 @@
+@model server.Models.Admin.AdminExploreIndexViewModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Khám phá";
+}
+
+<main class="admin-dashboard admin-compact-page">
+    <aside class="admin-sidebar">
+        <div class="admin-brand-row">
+            <img src="~/images/brand_logo.png" alt="Depressy Mate" class="admin-brand-logo" />
+            <div>
+                <div class="admin-brand-name">Depressy Mate</div>
+                <div class="admin-brand-subtitle">Cổng quản trị</div>
+            </div>
+        </div>
+
+        <nav class="admin-nav" aria-label="Điều hướng quản trị">
+            <a asp-controller="Admin" asp-action="Index">Tổng quan</a>
+            <a asp-controller="AdminUsers" asp-action="Index">Người dùng</a>
+            <a asp-controller="AdminDoctors" asp-action="Index">Bác sĩ</a>
+            <a asp-controller="AdminClinics" asp-action="Index">Phòng khám</a>
+            <a asp-controller="AdminContent" asp-action="Index">Nội dung</a>
+            <a class="active" asp-controller="AdminExplore" asp-action="Index">Khám phá</a>
+            <a asp-controller="AdminNotifications" asp-action="Index">Thông báo đẩy</a>
+        </nav>
+    </aside>
+
+    <section class="admin-main">
+        @if (TempData["AdminExploreSuccess"] is string successMessage)
+        {
+            <div class="admin-alert admin-alert-success" role="alert">@successMessage</div>
+        }
+
+        @if (TempData["AdminExploreError"] is string errorMessage)
+        {
+            <div class="admin-alert admin-alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <header class="admin-page-header compact">
+            <div>
+                <p class="admin-kicker">Explore & Learn</p>
+                <h1>Quản lý Khám phá</h1>
+                <p>Quản lý workshop, video YouTube, bài viết kỹ năng và thứ tự hiển thị trên app.</p>
+            </div>
+
+            <a class="admin-primary-link compact" asp-controller="AdminExplore" asp-action="Create">Thêm nội dung</a>
+        </header>
+
+        <section class="admin-content-overview" aria-label="Thống kê Khám phá">
+            <article class="highlight">
+                <span>Tổng nội dung</span>
+                <strong>@Model.TotalContents</strong>
+                <small>Tất cả nội dung Khám phá</small>
+            </article>
+            <article>
+                <span>Đã xuất bản</span>
+                <strong>@Model.PublishedContents</strong>
+                <small>Đang hiển thị trên app</small>
+            </article>
+            <article>
+                <span>Bản nháp</span>
+                <strong>@Model.DraftContents</strong>
+                <small>Chưa công khai</small>
+            </article>
+            <article>
+                <span>Video</span>
+                <strong>@Model.VideoContents</strong>
+                <small>Có link YouTube</small>
+            </article>
+        </section>
+
+        <section class="admin-panel compact-panel admin-content-toolbar">
+            <form asp-controller="AdminExplore" asp-action="Index" method="get" class="admin-content-filter">
+                <label class="admin-field">
+                    <span>Tìm kiếm</span>
+                    <input name="search" value="@Model.Search" placeholder="Tiêu đề, slug, mô tả..." />
+                </label>
+
+                <label class="admin-field">
+                    <span>Nhóm</span>
+                    <select name="categoryId" asp-items="Model.Categories"></select>
+                </label>
+
+                <label class="admin-field">
+                    <span>Trạng thái</span>
+                    <select name="status">
+                        <option value="published" selected="@(Model.Status == "published")">Đã xuất bản</option>
+                        <option value="draft" selected="@(Model.Status == "draft")">Bản nháp</option>
+                        <option value="inactive" selected="@(Model.Status == "inactive")">Đã ẩn</option>
+                        <option value="all" selected="@(Model.Status == "all")">Tất cả</option>
+                    </select>
+                </label>
+
+                <div class="admin-filter-actions">
+                    <button type="submit" class="admin-primary-button compact">Lọc</button>
+                    <a class="admin-secondary-link compact" asp-controller="AdminExplore" asp-action="Index">Xóa lọc</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="admin-panel compact-panel">
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Nội dung</th>
+                            <th>Nhóm</th>
+                            <th>Loại</th>
+                            <th>Trạng thái</th>
+                            <th>Thứ tự</th>
+                            <th>Cập nhật</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.Contents.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7">Chưa có nội dung phù hợp.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model.Contents)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="admin-user-cell">
+                                        @if (!string.IsNullOrWhiteSpace(item.ThumbnailUrl))
+                                        {
+                                            <img src="@item.ThumbnailUrl" alt="@item.Title" />
+                                        }
+                                        else
+                                        {
+                                            <span class="admin-avatar-fallback">@item.Title.Substring(0, 1).ToUpperInvariant()</span>
+                                        }
+                                        <div>
+                                            <strong>@item.Title</strong>
+                                            <small>@item.Slug</small>
+                                            @if (item.IsFeatured)
+                                            {
+                                                <small>Nổi bật</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@item.CategoryName</td>
+                                <td>@item.ContentType</td>
+                                <td>
+                                    <span class="admin-status-pill @(item.IsPublished ? "success" : "muted")">
+                                        @(item.IsPublished ? "Hiển thị" : item.Status)
+                                    </span>
+                                </td>
+                                <td>@item.DisplayOrder</td>
+                                <td>@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div class="admin-row-actions">
+                                        <a asp-controller="AdminExplore" asp-action="Edit" asp-route-id="@item.Id">Sửa</a>
+                                        <form asp-controller="AdminExplore" asp-action="Toggle" asp-route-id="@item.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit">@(item.IsActive ? "Ẩn" : "Hiện")</button>
+                                        </form>
+                                        <form asp-controller="AdminExplore" asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Bạn chắc chắn muốn xóa nội dung này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="danger">Xóa</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
+</main>

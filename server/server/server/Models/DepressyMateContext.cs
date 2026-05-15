@@ -31,6 +31,14 @@ public partial class DepressyMateContext : DbContext
 
     public virtual DbSet<Doctor> Doctors { get; set; }
 
+    public virtual DbSet<ExploreCategory> ExploreCategories { get; set; }
+
+    public virtual DbSet<ExploreContent> ExploreContents { get; set; }
+
+    public virtual DbSet<ExploreContentSection> ExploreContentSections { get; set; }
+
+    public virtual DbSet<ExploreContentView> ExploreContentViews { get; set; }
+
     public virtual DbSet<Journal> Journals { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
@@ -315,6 +323,203 @@ public partial class DepressyMateContext : DbContext
                 .HasColumnName("workplace");
         });
 
+        modelBuilder.Entity<ExploreCategory>(entity =>
+        {
+            entity.ToTable("explore_categories");
+
+            entity.HasIndex(e => e.Slug, "UQ_explore_categories_slug").IsUnique();
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.CategoryType)
+                .HasMaxLength(50)
+                .HasColumnName("category_type");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.Description)
+                .HasMaxLength(500)
+                .HasColumnName("description");
+            entity.Property(e => e.DisplayOrder)
+                .HasDefaultValue(0)
+                .HasColumnName("display_order");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+            entity.Property(e => e.Name)
+                .HasMaxLength(150)
+                .HasColumnName("name");
+            entity.Property(e => e.Slug)
+                .HasMaxLength(150)
+                .HasColumnName("slug");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(3)
+                .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<ExploreContent>(entity =>
+        {
+            entity.ToTable("explore_contents");
+
+            entity.HasIndex(e => e.Slug, "UQ_explore_contents_slug").IsUnique();
+
+            entity.HasIndex(e => new { e.CategoryId, e.DisplayOrder }, "IX_explore_contents_category_order");
+
+            entity.HasIndex(e => new { e.Status, e.IsActive, e.PublishedAt }, "IX_explore_contents_published");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.BadgeColor)
+                .HasMaxLength(50)
+                .HasColumnName("badge_color");
+            entity.Property(e => e.BadgeText)
+                .HasMaxLength(100)
+                .HasColumnName("badge_text");
+            entity.Property(e => e.CategoryId).HasColumnName("category_id");
+            entity.Property(e => e.Content).HasColumnName("content");
+            entity.Property(e => e.ContentType)
+                .HasMaxLength(50)
+                .HasColumnName("content_type");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.DisplayOrder)
+                .HasDefaultValue(0)
+                .HasColumnName("display_order");
+            entity.Property(e => e.IconBackgroundColor)
+                .HasMaxLength(50)
+                .HasColumnName("icon_background_color");
+            entity.Property(e => e.IconColor)
+                .HasMaxLength(50)
+                .HasColumnName("icon_color");
+            entity.Property(e => e.IconName)
+                .HasMaxLength(100)
+                .HasColumnName("icon_name");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+            entity.Property(e => e.IsFeatured)
+                .HasDefaultValue(false)
+                .HasColumnName("is_featured");
+            entity.Property(e => e.PublishedAt)
+                .HasPrecision(3)
+                .HasColumnName("published_at");
+            entity.Property(e => e.Slug)
+                .HasMaxLength(220)
+                .HasColumnName("slug");
+            entity.Property(e => e.Status)
+                .HasMaxLength(30)
+                .HasDefaultValue("DRAFT")
+                .HasColumnName("status");
+            entity.Property(e => e.Subtitle)
+                .HasMaxLength(300)
+                .HasColumnName("subtitle");
+            entity.Property(e => e.Summary)
+                .HasMaxLength(1000)
+                .HasColumnName("summary");
+            entity.Property(e => e.ThumbnailUrl)
+                .HasMaxLength(1000)
+                .HasColumnName("thumbnail_url");
+            entity.Property(e => e.Title)
+                .HasMaxLength(200)
+                .HasColumnName("title");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(3)
+                .HasColumnName("updated_at");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.YoutubeUrl)
+                .HasMaxLength(1000)
+                .HasColumnName("youtube_url");
+            entity.Property(e => e.YoutubeVideoId)
+                .HasMaxLength(100)
+                .HasColumnName("youtube_video_id");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.ExploreContents)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_explore_contents_category");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ExploreContentCreatedByNavigations)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_explore_contents_created_by");
+
+            entity.HasOne(d => d.UpdatedByNavigation).WithMany(p => p.ExploreContentUpdatedByNavigations)
+                .HasForeignKey(d => d.UpdatedBy)
+                .HasConstraintName("fk_explore_contents_updated_by");
+        });
+
+        modelBuilder.Entity<ExploreContentSection>(entity =>
+        {
+            entity.ToTable("explore_content_sections");
+
+            entity.HasIndex(e => new { e.ContentId, e.DisplayOrder }, "IX_explore_content_sections_content_order");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.Body).HasColumnName("body");
+            entity.Property(e => e.ContentId).HasColumnName("content_id");
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.DisplayOrder)
+                .HasDefaultValue(0)
+                .HasColumnName("display_order");
+            entity.Property(e => e.Heading)
+                .HasMaxLength(200)
+                .HasColumnName("heading");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+            entity.Property(e => e.MediaUrl)
+                .HasMaxLength(1000)
+                .HasColumnName("media_url");
+            entity.Property(e => e.SectionType)
+                .HasMaxLength(50)
+                .HasColumnName("section_type");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(3)
+                .HasColumnName("updated_at");
+
+            entity.HasOne(d => d.Content).WithMany(p => p.ExploreContentSections)
+                .HasForeignKey(d => d.ContentId)
+                .HasConstraintName("fk_explore_content_sections_content");
+        });
+
+        modelBuilder.Entity<ExploreContentView>(entity =>
+        {
+            entity.ToTable("explore_content_views");
+
+            entity.HasIndex(e => new { e.ContentId, e.ViewedAt }, "IX_explore_content_views_content_viewed").IsDescending(false, true);
+
+            entity.HasIndex(e => new { e.UserId, e.ViewedAt }, "IX_explore_content_views_user_viewed").IsDescending(false, true);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("id");
+            entity.Property(e => e.ContentId).HasColumnName("content_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.ViewedAt)
+                .HasPrecision(3)
+                .HasDefaultValueSql("(sysutcdatetime())")
+                .HasColumnName("viewed_at");
+
+            entity.HasOne(d => d.Content).WithMany(p => p.ExploreContentViews)
+                .HasForeignKey(d => d.ContentId)
+                .HasConstraintName("fk_explore_content_views_content");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ExploreContentViews)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("fk_explore_content_views_user");
+        });
+
         modelBuilder.Entity<Journal>(entity =>
         {
             entity.ToTable("journals");
@@ -594,6 +799,7 @@ public partial class DepressyMateContext : DbContext
             entity.Property(e => e.AuthProvider)
                 .HasMaxLength(50)
                 .HasColumnName("auth_provider");
+            entity.Property(e => e.Age).HasColumnName("age");
             entity.Property(e => e.FacebookId)
                 .HasMaxLength(100)
                 .HasColumnName("facebook_id");

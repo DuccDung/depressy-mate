@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,7 +24,7 @@ import SocialFeedScreen from './socials/SocialFeedScreen';
 import { UserAvatar } from '../components/socials/UserAvatar';
 import { CommunitySection } from '../components/home/CommunitySection';
 import { DailyHealthPoint, healthService, HealthSummary } from '../services/healthService';
-import type { MainTabParamList } from '../navigation/MainTabNavigator';
+import type { MainStackParamList } from '../navigation/MainStackNavigator';
 
 type HomeFeature = 'assessments' | 'breathe' | 'sleep' | 'checkin' | 'journal' | 'socials' | null;
 
@@ -96,7 +96,7 @@ const quickActions = [
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList, 'Home'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [activeFeature, setActiveFeature] = useState<HomeFeature>(null);
   const [summary, setSummary] = useState<HealthSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +131,7 @@ export default function HomeScreen() {
   };
 
   const openExploreCommunity = useCallback((focusPostId?: string) => {
-    navigation.navigate('Explore', {
+    navigation.navigate('Community', {
       initialTab: 'community',
       focusPostId,
     });
@@ -199,7 +199,6 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.greeting}>{getGreeting()}, {user?.fullName || 'bạn'}</Text>
-            <Text style={styles.subtitle}>Theo dõi tiến triển sức khỏe của bạn theo thời gian.</Text>
           </View>
           <UserAvatar
             userId={user?.id || ''}
@@ -527,13 +526,6 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: '900',
     color: '#144E49',
-  },
-  subtitle: {
-    fontFamily: 'Manrope',
-    fontSize: 13,
-    color: '#65736F',
-    lineHeight: 19,
-    marginTop: 4,
   },
   loadingBox: {
     minHeight: 260,

@@ -69,9 +69,18 @@ public class UsersApiController : ControllerBase
             return BadRequest(new { error = "Giới thiệu không được vượt quá 1000 ký tự." });
         }
 
+        if (request.Age.HasValue && !IsValidAge(request.Age.Value))
+        {
+            return BadRequest(new { error = "Tuoi phai nam trong khoang 6 den 120." });
+        }
+
         var now = DateTime.UtcNow;
         user.FullName = fullName;
         user.AvatarUrl = avatarUrl;
+        if (request.Age.HasValue)
+        {
+            user.Age = request.Age.Value;
+        }
         user.UpdatedAt = now;
 
         if (user.Profile is null)
@@ -121,6 +130,7 @@ public class UsersApiController : ControllerBase
             email = user.Email,
             role = user.Role,
             fullName = user.Profile?.FullName ?? user.FullName ?? user.Email,
+            age = user.Age,
             avatarUrl = user.Profile?.AvatarUrl ?? user.AvatarUrl,
             bio = user.Profile?.Bio,
             authProvider = string.IsNullOrWhiteSpace(user.AuthProvider) ? "local" : user.AuthProvider,
@@ -134,6 +144,11 @@ public class UsersApiController : ControllerBase
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
+
+    private static bool IsValidAge(int age)
+    {
+        return age is >= 6 and <= 120;
+    }
 }
 
 public sealed class UpdateProfileRequest
@@ -143,4 +158,6 @@ public sealed class UpdateProfileRequest
     public string? AvatarUrl { get; init; }
 
     public string? Bio { get; init; }
+
+    public int? Age { get; init; }
 }
