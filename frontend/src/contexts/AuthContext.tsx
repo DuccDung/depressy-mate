@@ -8,6 +8,7 @@ import {
   listenFirebaseTokenRefresh,
   registerCurrentDevicePushToken,
 } from '../services/firebaseMessagingService';
+import { usePushNotifications } from './PushNotificationContext';
 
 export interface User {
   id: string;
@@ -44,6 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { showNotification } = usePushNotifications();
 
   useEffect(() => {
     const loadToken = async () => {
@@ -74,14 +76,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('Push notification registration failed:', error?.message || error);
     });
 
-    const unsubscribeForeground = listenFirebaseForegroundMessages();
+    const unsubscribeForeground = listenFirebaseForegroundMessages(showNotification);
     const unsubscribeTokenRefresh = listenFirebaseTokenRefresh();
 
     return () => {
       unsubscribeForeground();
       unsubscribeTokenRefresh();
     };
-  }, [token]);
+  }, [token, showNotification]);
 
   const persistAuthSession = async (newToken: string, userData: User) => {
     if (token && token !== newToken) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  Share,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -17,6 +18,7 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../../constants/theme';
@@ -39,18 +41,28 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isShuffleOn, setIsShuffleOn] = useState(false);
   const positionRef = React.useRef(0);
   const durationRef = React.useRef(0);
   const listenedMsRef = React.useRef(0);
   const playStartedAtRef = React.useRef<number | null>(null);
   const autoStopTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Album art animation
   const albumScale = useSharedValue(0.85);
   const albumOpacity = useSharedValue(0);
-
-  // Vinyl disc pulse
   const pulseScale = useSharedValue(1);
+  const playButtonScale = useSharedValue(1);
+  const backIconOffset = useSharedValue(0);
+  const forwardIconOffset = useSharedValue(0);
+  const shuffleScale = useSharedValue(1);
+  const shuffleRotation = useSharedValue(0);
+  const repeatScale = useSharedValue(1);
+  const repeatRotation = useSharedValue(0);
+  const heartScale = useSharedValue(1);
+  const timerScale = useSharedValue(1);
+  const shareScale = useSharedValue(1);
+  const menuScale = useSharedValue(1);
 
   useEffect(() => {
     if (visible && track) {
@@ -72,7 +84,6 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     };
   }, [sound]);
 
-  // Pulsing animation when playing
   useEffect(() => {
     if (isPlaying) {
       pulseScale.value = withRepeat(
@@ -83,8 +94,15 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
         -1,
         true
       );
+      repeatRotation.value = 0;
+      repeatRotation.value = withRepeat(
+        withTiming(360, { duration: 4200, easing: Easing.linear }),
+        -1,
+        false
+      );
     } else {
       pulseScale.value = withTiming(1, { duration: 300 });
+      repeatRotation.value = withTiming(0, { duration: 250 });
     }
   }, [isPlaying]);
 
@@ -97,7 +115,6 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
       playStartedAtRef.current = null;
       clearAutoStopTimer();
 
-      // Unload existing sound
       if (sound) {
         await sound.unloadAsync();
       }
@@ -162,7 +179,26 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     }
   };
 
+  const animateTap = (value: SharedValue<number>) => {
+    value.value = withSequence(
+      withTiming(0.86, { duration: 80 }),
+      withSpring(1.1, { damping: 6, stiffness: 240 }),
+      withSpring(1, { damping: 8, stiffness: 180 })
+    );
+  };
+
+  const animateSeek = (direction: 'forward' | 'backward') => {
+    const value = direction === 'forward' ? forwardIconOffset : backIconOffset;
+    const distance = direction === 'forward' ? 12 : -12;
+
+    value.value = withSequence(
+      withTiming(distance, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withSpring(0, { damping: 7, stiffness: 190 })
+    );
+  };
+
   const handlePlayPause = async () => {
+    animateTap(playButtonScale);
     if (!sound) return;
 
     try {
@@ -181,6 +217,7 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
   };
 
   const handleSeek = async (direction: 'forward' | 'backward') => {
+    animateSeek(direction);
     if (!sound) return;
 
     try {
@@ -194,6 +231,50 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     } catch (error) {
       console.log('Error seeking:', error);
     }
+  };
+
+  const handleShufflePress = () => {
+    setIsShuffleOn((current) => !current);
+    animateTap(shuffleScale);
+    shuffleRotation.value = withSequence(
+      withTiming(-14, { duration: 80 }),
+      withTiming(14, { duration: 120 }),
+      withSpring(0, { damping: 8, stiffness: 180 })
+    );
+  };
+
+  const handleRepeatPress = () => {
+    animateTap(repeatScale);
+  };
+
+  const handleHeartPress = () => {
+    setIsLiked((current) => !current);
+    heartScale.value = withSequence(
+      withTiming(0.78, { duration: 70 }),
+      withSpring(1.34, { damping: 5, stiffness: 260 }),
+      withSpring(1, { damping: 7, stiffness: 190 })
+    );
+  };
+
+  const handleTimerPress = () => {
+    animateTap(timerScale);
+  };
+
+  const handleSharePress = async () => {
+    animateTap(shareScale);
+    if (!track) return;
+
+    try {
+      await Share.share({
+        message: `Mình đang nghe "${track.title}" để thư giãn trước khi ngủ trong Depressy Mate.`,
+      });
+    } catch (error) {
+      console.log('Error sharing sleep track:', error);
+    }
+  };
+
+  const handleMenuPress = () => {
+    animateTap(menuScale);
   };
 
   const handleClose = async () => {
@@ -245,6 +326,54 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
     transform: [{ scale: pulseScale.value }],
   }));
 
+  const playButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: playButtonScale.value }],
+  }));
+
+  const backIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: backIconOffset.value },
+      { scale: 1 + Math.abs(backIconOffset.value) / 80 },
+    ],
+  }));
+
+  const forwardIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: forwardIconOffset.value },
+      { scale: 1 + Math.abs(forwardIconOffset.value) / 80 },
+    ],
+  }));
+
+  const shuffleIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: shuffleScale.value },
+      { rotate: `${shuffleRotation.value}deg` },
+    ],
+  }));
+
+  const repeatIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: repeatScale.value },
+      { rotate: `${repeatRotation.value}deg` },
+    ],
+  }));
+
+  const heartIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
+
+  const timerIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: timerScale.value }],
+  }));
+
+  const shareIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: shareScale.value }],
+  }));
+
+  const menuIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: menuScale.value }],
+  }));
+
   if (!track) return null;
 
   return (
@@ -255,10 +384,8 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
       onRequestClose={handleClose}
     >
       <View style={styles.container}>
-        {/* Blurred Background Tint */}
         <View style={[styles.bgTint, { backgroundColor: track.bgColor }]} />
 
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton} activeOpacity={0.7}>
             <Ionicons name="chevron-down" size={28} color={Colors.light.onSurface} />
@@ -267,17 +394,17 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
             <Text style={styles.headerLabel}>ĐANG PHÁT</Text>
             <Text style={styles.headerCategory}>{track.categoryLabel}</Text>
           </View>
-          <TouchableOpacity style={styles.headerButton} activeOpacity={0.7}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={Colors.light.onSurface} />
+          <TouchableOpacity style={styles.headerButton} onPress={handleMenuPress} activeOpacity={0.7}>
+            <Animated.View style={menuIconStyle}>
+              <Ionicons name="ellipsis-horizontal" size={24} color={Colors.light.onSurface} />
+            </Animated.View>
           </TouchableOpacity>
         </View>
 
-        {/* Album Art */}
         <Animated.View style={[styles.albumSection, albumStyle]}>
           <Animated.View style={[styles.albumShadow, pulseStyle]}>
             <View style={styles.albumContainer}>
               <Image source={{ uri: track.image }} style={styles.albumImage} />
-              {/* Vinyl overlay */}
               <View style={styles.vinylOverlay}>
                 <View style={styles.vinylCenter} />
               </View>
@@ -285,13 +412,11 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
           </Animated.View>
         </Animated.View>
 
-        {/* Track Info */}
         <View style={styles.trackInfo}>
           <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
           <Text style={styles.trackArtist}>{track.artist}</Text>
         </View>
 
-        {/* Progress Bar */}
         <View style={styles.progressSection}>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
@@ -303,10 +428,19 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
           </View>
         </View>
 
-        {/* Controls */}
         <View style={styles.controls}>
-          <TouchableOpacity style={styles.controlBtn} onPress={() => {}} activeOpacity={0.6}>
-            <Ionicons name="shuffle" size={22} color={Colors.light.onSurfaceVariant} />
+          <TouchableOpacity
+            style={[styles.controlBtn, isShuffleOn && styles.controlBtnActive]}
+            onPress={handleShufflePress}
+            activeOpacity={0.6}
+          >
+            <Animated.View style={shuffleIconStyle}>
+              <Ionicons
+                name="shuffle"
+                size={22}
+                color={isShuffleOn ? Colors.light.secondary : Colors.light.onSurfaceVariant}
+              />
+            </Animated.View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -314,24 +448,28 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
             onPress={() => handleSeek('backward')}
             activeOpacity={0.6}
           >
-            <Ionicons name="play-back" size={28} color={Colors.light.onSurface} />
+            <Animated.View style={backIconStyle}>
+              <Ionicons name="play-back" size={28} color={Colors.light.onSurface} />
+            </Animated.View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.playButton}
             onPress={handlePlayPause}
             activeOpacity={0.85}
+            disabled={isLoading}
           >
-            {isLoading ? (
-              <Text style={styles.loadingText}>...</Text>
-            ) : (
-              <Ionicons
-                name={isPlaying ? 'pause' : 'play'}
-                size={32}
-                color="#FFFFFF"
-                style={!isPlaying ? { marginLeft: 3 } : undefined}
-              />
-            )}
+            <Animated.View style={[styles.playButton, playButtonStyle]}>
+              {isLoading ? (
+                <Text style={styles.loadingText}>...</Text>
+              ) : (
+                <Ionicons
+                  name={isPlaying ? 'pause' : 'play'}
+                  size={32}
+                  color="#FFFFFF"
+                  style={!isPlaying ? { marginLeft: 3 } : undefined}
+                />
+              )}
+            </Animated.View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -339,25 +477,46 @@ export default function MusicPlayerModal({ visible, track, onClose, onSessionEnd
             onPress={() => handleSeek('forward')}
             activeOpacity={0.6}
           >
-            <Ionicons name="play-forward" size={28} color={Colors.light.onSurface} />
+            <Animated.View style={forwardIconStyle}>
+              <Ionicons name="play-forward" size={28} color={Colors.light.onSurface} />
+            </Animated.View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlBtn} onPress={() => {}} activeOpacity={0.6}>
-            <Ionicons name="repeat" size={22} color={Colors.light.secondary} />
+          <TouchableOpacity
+            style={[styles.controlBtn, styles.controlBtnActive]}
+            onPress={handleRepeatPress}
+            activeOpacity={0.6}
+          >
+            <Animated.View style={repeatIconStyle}>
+              <Ionicons name="repeat" size={22} color={Colors.light.secondary} />
+            </Animated.View>
           </TouchableOpacity>
         </View>
 
-        {/* Bottom Actions */}
         <View style={styles.bottomActions}>
-          <TouchableOpacity style={styles.bottomBtn} activeOpacity={0.6}>
-            <Ionicons name="heart-outline" size={22} color={Colors.light.onSurfaceVariant} />
+          <TouchableOpacity
+            style={[styles.bottomBtn, isLiked && styles.bottomBtnActive]}
+            onPress={handleHeartPress}
+            activeOpacity={0.6}
+          >
+            <Animated.View style={heartIconStyle}>
+              <Ionicons
+                name={isLiked ? 'heart' : 'heart-outline'}
+                size={23}
+                color={isLiked ? '#E84A7A' : Colors.light.onSurfaceVariant}
+              />
+            </Animated.View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomBtn} activeOpacity={0.6}>
-            <Ionicons name="timer-outline" size={22} color={Colors.light.onSurfaceVariant} />
-            <Text style={styles.bottomBtnText}>Hẹn giờ</Text>
+          <TouchableOpacity style={styles.bottomBtn} onPress={handleTimerPress} activeOpacity={0.6}>
+            <Animated.View style={timerIconStyle}>
+              <Ionicons name="timer-outline" size={22} color={Colors.light.secondary} />
+            </Animated.View>
+            <Text style={[styles.bottomBtnText, styles.bottomBtnTextActive]}>30 phút</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomBtn} activeOpacity={0.6}>
-            <Ionicons name="share-outline" size={22} color={Colors.light.onSurfaceVariant} />
+          <TouchableOpacity style={styles.bottomBtn} onPress={handleSharePress} activeOpacity={0.6}>
+            <Animated.View style={shareIconStyle}>
+              <Ionicons name="share-outline" size={22} color={Colors.light.onSurfaceVariant} />
+            </Animated.View>
           </TouchableOpacity>
         </View>
       </View>
@@ -508,8 +667,12 @@ const styles = StyleSheet.create({
   controlBtn: {
     width: 44,
     height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  controlBtnActive: {
+    backgroundColor: 'rgba(0, 106, 99, 0.12)',
   },
   playButton: {
     width: 64,
@@ -535,13 +698,23 @@ const styles = StyleSheet.create({
     gap: Spacing.xl + Spacing.md,
   },
   bottomBtn: {
+    minWidth: 52,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
+  },
+  bottomBtnActive: {
+    backgroundColor: 'rgba(232, 74, 122, 0.12)',
   },
   bottomBtnText: {
     fontSize: 10,
     fontFamily: Typography.fontFamily,
     fontWeight: '600',
     color: Colors.light.onSurfaceVariant,
+  },
+  bottomBtnTextActive: {
+    color: Colors.light.secondary,
   },
 });

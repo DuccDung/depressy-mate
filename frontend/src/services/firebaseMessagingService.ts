@@ -1,8 +1,15 @@
 import messaging from "@react-native-firebase/messaging";
-import { Alert, PermissionsAndroid, Platform } from "react-native";
+import { PermissionsAndroid, Platform } from "react-native";
 import api from "./api";
 
 const PROVIDER = "firebase";
+
+export interface ForegroundPushNotification {
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  receivedAt: number;
+}
 
 async function requestAndroidNotificationPermission() {
   const androidVersion =
@@ -64,15 +71,24 @@ export async function deactivateCurrentDevicePushToken() {
   });
 }
 
-export function listenFirebaseForegroundMessages() {
+export function listenFirebaseForegroundMessages(
+  onNotification?: (notification: ForegroundPushNotification) => void
+) {
   return messaging().onMessage(async (remoteMessage) => {
     console.log("Nhan notification khi app dang mo:", remoteMessage);
     const title = remoteMessage.notification?.title || "Depressy Mate";
-    const body = remoteMessage.notification?.body || remoteMessage.data?.body;
+    const body =
+      remoteMessage.notification?.body ||
+      remoteMessage.data?.body ||
+      remoteMessage.data?.message ||
+      "";
 
-    if (body) {
-      Alert.alert(title, String(body));
-    }
+    onNotification?.({
+      title: String(title),
+      body: String(body),
+      data: remoteMessage.data as Record<string, unknown> | undefined,
+      receivedAt: Date.now(),
+    });
   });
 }
 

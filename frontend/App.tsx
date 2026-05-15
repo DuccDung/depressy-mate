@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { PushNotificationProvider } from './src/contexts/PushNotificationContext';
 import AuthStack from './src/navigation/AuthStack';
 import MainStackNavigator from './src/navigation/MainStackNavigator';
 import AiChatAssistant from './src/components/ai/AiChatAssistant';
@@ -56,10 +57,12 @@ function AppNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="dark" />
-        <AppNavigator />
-      </AuthProvider>
+      <PushNotificationProvider>
+        <AuthProvider>
+          <StatusBar style="dark" />
+          <AppNavigator />
+        </AuthProvider>
+      </PushNotificationProvider>
     </SafeAreaProvider>
   );
 }
